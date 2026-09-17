@@ -483,58 +483,78 @@
       reader.readAsDataURL(e.target.files[0]);
     };
 
+    const labelKor = {
+      'person': '사람', 'bicycle': '자전거', 'car': '자동차', 'motorcycle': '오토바이',
+      'airplane': '비행기', 'bus': '버스', 'train': '기차', 'truck': '트럭', 'boat': '보트',
+      'traffic light': '신호등', 'fire hydrant': '소화전', 'stop sign': '정지 표지판',
+      'bench': '벤치', 'bird': '새', 'cat': '고양이', 'dog': '강아지', 'horse': '말',
+      'sheep': '양', 'cow': '소', 'elephant': '코끼리', 'bear': '곰', 'zebra': '얼룩말',
+      'giraffe': '기린', 'backpack': '배낭', 'umbrella': '우산', 'handbag': '핸드백',
+      'tie': '넥타이', 'suitcase': '여행가방', 'frisbee': '원반', 'skis': '스키',
+      'snowboard': '스노보드', 'sports ball': '공', 'kite': '연', 'baseball bat': '야구방망이',
+      'baseball glove': '야구글러브', 'skateboard': '스케이트보드', 'surfboard': '서핑보드',
+      'tennis racket': '테니스라켓', 'bottle': '병', 'wine glass': '와인잔', 'cup': '컵',
+      'fork': '포크', 'knife': '칼', 'spoon': '숟가락', 'bowl': '그릇', 'banana': '바나나',
+      'apple': '사과', 'sandwich': '샌드위치', 'orange': '오렌지', 'broccoli': '브로콜리',
+      'carrot': '당근', 'hot dog': '핫도그', 'pizza': '피자', 'donut': '도넛', 'cake': '케이크',
+      'chair': '의자', 'couch': '소파', 'potted plant': '화분', 'bed': '침대',
+      'dining table': '식탁', 'toilet': '변기', 'tv': 'TV', 'laptop': '노트북',
+      'mouse': '마우스', 'remote': '리모컨', 'keyboard': '키보드', 'cell phone': '휴대폰',
+      'microwave': '전자레인지', 'oven': '오븐', 'toaster': '토스터', 'sink': '싱크대',
+      'refrigerator': '냉장고', 'book': '책', 'clock': '시계', 'vase': '꽃병',
+      'scissors': '가위', 'teddy bear': '곰인형', 'hair drier': '헤어드라이어', 'toothbrush': '칫솔'
+    };
+
     async function detect2B() {
       if (!cocoModel) return;
 
-      // 1. 이미지가 화면에 실제로 차지하고 있는 너비와 높이를 구합니다.
       const displayWidth = img2B.clientWidth;
       const displayHeight = img2B.clientHeight;
 
-      // 2. 캔버스 크기를 이미지 표시 크기와 정확히 1:1로 맞춥니다.
       canvas2B.width = displayWidth;
       canvas2B.height = displayHeight;
 
-      // 3. 캔버스 위치를 이미지 바로 위로 정밀 밀착시킵니다.
       canvas2B.style.position = 'absolute';
       canvas2B.style.left = img2B.offsetLeft + 'px';
       canvas2B.style.top = img2B.offsetTop + 'px';
 
       ctx2B.clearRect(0, 0, canvas2B.width, canvas2B.height);
 
-      // 4. AI 객체 탐지 실행
       const predictions = await cocoModel.detect(img2B);
       const tableBody = document.getElementById('table2B');
       tableBody.innerHTML = '';
 
-      // 5. 원본 해상도 대비 실제 화면 표시 크기 배율 정밀 계산
       const scaleX = displayWidth / img2B.naturalWidth;
       const scaleY = displayHeight / img2B.naturalHeight;
 
       predictions.forEach(p => {
         const [x, y, w, h] = p.bbox;
 
-        // 원본 좌표에 비율 적용
         const rx = x * scaleX;
         const ry = y * scaleY;
         const rw = w * scaleX;
         const rh = h * scaleY;
 
-        // 초록색 박스 그리기
+        // 사전에 한글 이름이 있으면 한글로, 없으면 기존 영문 표기
+        const classNameKor = labelKor[p.class] || p.class;
+
+        // 초록색 테두리 상자 그리기
         ctx2B.strokeStyle = '#00e676';
         ctx2B.lineWidth = 3;
         ctx2B.strokeRect(rx, ry, rw, rh);
 
-        // 텍스트 라벨 박스 그리기
+        // 한글 라벨 텍스트 바 그리기
         ctx2B.fillStyle = '#00e676';
-        ctx2B.font = 'bold 13px Arial';
-        const label = `${p.class} (${Math.round(p.score * 100)}%)`;
+        ctx2B.font = 'bold 13px sans-serif';
+        const label = `${classNameKor} (${Math.round(p.score * 100)}%)`;
         const textWidth = ctx2B.measureText(label).width;
 
         ctx2B.fillRect(rx, ry > 20 ? ry - 20 : ry, textWidth + 8, 20);
         ctx2B.fillStyle = '#000000';
         ctx2B.fillText(label, rx + 4, ry > 20 ? ry - 5 : ry + 15);
 
-        tableBody.innerHTML += `<tr><td><b>${p.class}</b></td><td>${Math.round(p.score * 100)}%</td></tr>`;
+        // 오른쪽 결과 표에 한글 출력
+        tableBody.innerHTML += `<tr><td><b>${classNameKor}</b></td><td>${Math.round(p.score * 100)}%</td></tr>`;
       });
 
       if (predictions.length === 0) {
