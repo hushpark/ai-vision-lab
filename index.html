@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>고교생을 위한 AI 컴퓨터 비전 실습실</title>
   
-  <!-- AI 라이브러리 (MediaPipe & TensorFlow.js) -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
@@ -15,19 +14,16 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { background-color: #f4f6f9; color: #333; }
 
-    /* Header & GNB */
     header { background: #1a2a3a; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
     header h1 { font-size: 20px; font-weight: bold; }
     nav { display: flex; gap: 10px; }
     .nav-btn { background: none; border: none; color: #cfd8dc; padding: 10px 15px; font-size: 15px; cursor: pointer; border-bottom: 3px solid transparent; transition: 0.2s; }
     .nav-btn:hover, .nav-btn.active { color: #4fc3f7; border-bottom-color: #4fc3f7; font-weight: bold; }
 
-    /* Sub Tabs */
     .sub-tabs { background: #0056b3; padding: 10px 20px; display: flex; gap: 10px; border-radius: 6px; margin-bottom: 20px; }
     .tab-btn { background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
     .tab-btn.active { background: white; color: #0056b3; }
 
-    /* Layout */
     .content-container { max-width: 1200px; margin: 25px auto; padding: 0 15px; }
     .page-section { display: none; }
     .page-section.active { display: block; }
@@ -36,12 +32,11 @@
     .card { background: white; border-radius: 8px; border: 1px solid #e0e0e0; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .card-title { font-size: 18px; font-weight: bold; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 15px; color: #0056b3; }
 
-    /* Media Area - 이미지와 캔버스 정밀 위치 정렬 */
+    /* 미디어 영역 - 이미지 정밀 위치 정렬 */
     .media-wrapper { position: relative; width: 100%; height: 420px; background: #000; display: flex; justify-content: center; align-items: center; border-radius: 6px; overflow: hidden; }
     .media-wrapper img, .media-wrapper video { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
     canvas { position: absolute; pointer-events: none; }
 
-    /* Elements & UI */
     .controls { margin-top: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     .btn { background: #0056b3; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; }
     .btn:hover { background: #003d80; }
@@ -49,7 +44,6 @@
     .sample-img { width: 80px; height: 60px; object-fit: cover; border: 2px solid transparent; border-radius: 4px; cursor: pointer; }
     .sample-img.selected { border-color: #0056b3; }
 
-    /* Table & Activity */
     table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
     th, td { border: 1px solid #e0e0e0; padding: 8px; text-align: center; }
     th { background: #f8f9fa; }
@@ -60,11 +54,9 @@
     .mode-panel.active { display: grid; }
     .status-text { font-weight: bold; font-size: 13px; color: #e67e22; }
 
-    /* Game UI Elements */
     .game-score-box { background: #eef2f5; padding: 15px; border-radius: 6px; font-size: 18px; font-weight: bold; text-align: center; margin-bottom: 15px; }
     .game-result { font-size: 24px; font-weight: bold; color: #d63031; text-align: center; margin-top: 10px; }
 
-    /* Concept Guide Style */
     .concept-card { background: #fff; border-top: 4px solid #0056b3; }
     .concept-card h3 { font-size: 16px; color: #0056b3; margin-bottom: 10px; }
     .concept-card p { font-size: 13px; color: #555; line-height: 1.6; }
@@ -84,7 +76,7 @@
 
   <div class="content-container">
 
-    <!-- SECTION 1: 손가락 추적 -->
+    <!-- SECTION 1 -->
     <section id="sec1" class="page-section active">
       <div class="grid-2">
         <div class="card">
@@ -113,7 +105,7 @@
       </div>
     </section>
 
-    <!-- SECTION 2: 사물 탐지 및 분석 -->
+    <!-- SECTION 2 -->
     <section id="sec2" class="page-section">
       <div class="sub-tabs">
         <button class="tab-btn active" onclick="switchMode('modeA', this)">Mode A: 실시간 사물 인식</button>
@@ -190,14 +182,13 @@
       </div>
     </section>
 
-    <!-- SECTION 3: AI 비전 게임 존 -->
+    <!-- SECTION 3 -->
     <section id="sec3" class="page-section">
       <div class="sub-tabs">
         <button class="tab-btn active" onclick="switchGame('game1', this)">🎮 Game 1: AI 가위바위보</button>
         <button class="tab-btn" onclick="switchGame('game2', this)">🔍 Game 2: AI 보물찾기</button>
       </div>
 
-      <!-- Game 1 -->
       <div id="game1" class="mode-panel active grid-2">
         <div class="card">
           <div class="card-title">✊✌️🖐️ AI vs 나: 가위바위보</div>
@@ -220,7 +211,6 @@
         </div>
       </div>
 
-      <!-- Game 2 -->
       <div id="game2" class="mode-panel grid-2">
         <div class="card">
           <div class="card-title">🔍 AI 보물찾기 (Scavenger Hunt)</div>
@@ -245,7 +235,7 @@
       </div>
     </section>
 
-    <!-- SECTION 4: 컴퓨터 비전 원리 가이드 -->
+    <!-- SECTION 4 -->
     <section id="sec4" class="page-section">
       <div class="card">
         <div class="card-title">💡 컴퓨터 비전(Computer Vision) 핵심 개념 학습 가이드</div>
@@ -256,23 +246,15 @@
         <div class="grid-3">
           <div class="card concept-card">
             <h3>1. 이미지 가공 & 픽셀 데이터</h3>
-            <p>
-              컴퓨터는 사람처럼 눈으로 보는 것이 아니라 **행렬 수치(0~255)**로 이미지를 처리합니다. RGB 3색의 수치 조합으로 사물의 색상과 테두리를 인식합니다.
-            </p>
+            <p>컴퓨터는 사람처럼 눈으로 보는 것이 아니라 **행렬 수치(0~255)**로 이미지를 처리합니다.</p>
           </div>
-
           <div class="card concept-card">
             <h3>2. 객체 탐지 (Object Detection)</h3>
-            <p>
-              사물의 위치를 찾아내는 **Bounding Box**와 해당 사물의 종류를 판별하는 **Classification**이 결합되어 동작합니다.
-            </p>
+            <p>사물 위치를 찾는 **Bounding Box**와 종류를 판별하는 **Classification**이 결합되어 동작합니다.</p>
           </div>
-
           <div class="card concept-card">
             <h3>3. 신뢰도 (Confidence Score)</h3>
-            <p>
-              AI가 해당 탐지 결과를 얼마나 확신하는지 확률(%)로 나타낸 지표입니다. 임계값(Threshold)을 조정하여 탐지 민감도를 조절할 수 있습니다.
-            </p>
+            <p>AI가 탐지 결과를 얼마나 확신하는지 확률(%)로 나타낸 지표입니다.</p>
           </div>
         </div>
       </div>
@@ -281,7 +263,20 @@
   </div>
 
   <script>
-    // --- Global Nav Controls ---
+    // 한글 번역 사전
+    const labelKor = {
+      'person': '사람', 'bicycle': '자전거', 'car': '자동차', 'motorcycle': '오토바이',
+      'airplane': '비행기', 'bus': '버스', 'train': '기차', 'truck': '트럭', 'boat': '보트',
+      'traffic light': '신호등', 'fire hydrant': '소화전', 'bench': '벤치', 'bird': '새',
+      'cat': '고양이', 'dog': '강아지', 'horse': '말', 'backpack': '배낭', 'umbrella': '우산',
+      'handbag': '핸드백', 'tie': '넥타이', 'suitcase': '여행가방', 'bottle': '병',
+      'wine glass': '와인잔', 'cup': '컵', 'fork': '포크', 'knife': '칼', 'spoon': '숟가락',
+      'bowl': '그릇', 'banana': '바나나', 'apple': '사과', 'sandwich': '샌드위치', 'chair': '의자',
+      'couch': '소파', 'potted plant': '화분', 'bed': '침대', 'dining table': '식탁',
+      'tv': 'TV', 'laptop': '노트북', 'mouse': '마우스', 'remote': '리모컨', 'keyboard': '키보드',
+      'cell phone': '휴대폰', 'book': '책', 'clock': '시계', 'vase': '꽃병', 'scissors': '가위'
+    };
+
     function showSection(sectionId, btn) {
       document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
       document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -310,7 +305,7 @@
       stopGame2();
     }
 
-    // --- Section 1: Hand Tracking ---
+    // Hand Tracking
     let camera1;
     const hands1 = new Hands({ locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
     hands1.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
@@ -369,7 +364,7 @@
       document.getElementById('status1').style.color = "#e67e22";
     }
 
-    // --- Section 2: Object Detection ---
+    // Object Detection
     let cocoModel;
     let isWebcam2A = false;
     let animId2A;
@@ -416,15 +411,17 @@
         const rw = w * scaleX;
         const rh = h * scaleY;
 
+        const nameKor = labelKor[p.class] || p.class;
+
         ctx2A.strokeStyle = '#00FF00';
         ctx2A.lineWidth = 3;
         ctx2A.strokeRect(rx, ry, rw, rh);
         
         ctx2A.fillStyle = '#00FF00';
         ctx2A.font = 'bold 13px Arial';
-        ctx2A.fillText(`${p.class} (${Math.round(p.score * 100)}%)`, rx + 5, ry > 20 ? ry - 5 : ry + 15);
+        ctx2A.fillText(`${nameKor} (${Math.round(p.score * 100)}%)`, rx + 5, ry > 20 ? ry - 5 : ry + 15);
 
-        tableBody.innerHTML += `<tr><td>${p.class}</td><td>${Math.round(p.score * 100)}%</td></tr>`;
+        tableBody.innerHTML += `<tr><td>${nameKor}</td><td>${Math.round(p.score * 100)}%</td></tr>`;
       });
 
       if (isWebcam2A) animId2A = requestAnimationFrame(detectFrame2A);
@@ -461,7 +458,7 @@
       reader.readAsDataURL(e.target.files[0]);
     };
 
-    // --- Mode B: 좌표 배율 완벽 보정 ---
+    // --- Mode B 정밀 보정 및 한글 적용 ---
     const img2B = document.getElementById('image2B');
     const canvas2B = document.getElementById('canvas2B');
     const ctx2B = canvas2B.getContext('2d');
@@ -483,37 +480,12 @@
       reader.readAsDataURL(e.target.files[0]);
     };
 
-    const labelKor = {
-      'person': '사람', 'bicycle': '자전거', 'car': '자동차', 'motorcycle': '오토바이',
-      'airplane': '비행기', 'bus': '버스', 'train': '기차', 'truck': '트럭', 'boat': '보트',
-      'traffic light': '신호등', 'fire hydrant': '소화전', 'stop sign': '정지 표지판',
-      'bench': '벤치', 'bird': '새', 'cat': '고양이', 'dog': '강아지', 'horse': '말',
-      'sheep': '양', 'cow': '소', 'elephant': '코끼리', 'bear': '곰', 'zebra': '얼룩말',
-      'giraffe': '기린', 'backpack': '배낭', 'umbrella': '우산', 'handbag': '핸드백',
-      'tie': '넥타이', 'suitcase': '여행가방', 'frisbee': '원반', 'skis': '스키',
-      'snowboard': '스노보드', 'sports ball': '공', 'kite': '연', 'baseball bat': '야구방망이',
-      'baseball glove': '야구글러브', 'skateboard': '스케이트보드', 'surfboard': '서핑보드',
-      'tennis racket': '테니스라켓', 'bottle': '병', 'wine glass': '와인잔', 'cup': '컵',
-      'fork': '포크', 'knife': '칼', 'spoon': '숟가락', 'bowl': '그릇', 'banana': '바나나',
-      'apple': '사과', 'sandwich': '샌드위치', 'orange': '오렌지', 'broccoli': '브로콜리',
-      'carrot': '당근', 'hot dog': '핫도그', 'pizza': '피자', 'donut': '도넛', 'cake': '케이크',
-      'chair': '의자', 'couch': '소파', 'potted plant': '화분', 'bed': '침대',
-      'dining table': '식탁', 'toilet': '변기', 'tv': 'TV', 'laptop': '노트북',
-      'mouse': '마우스', 'remote': '리모컨', 'keyboard': '키보드', 'cell phone': '휴대폰',
-      'microwave': '전자레인지', 'oven': '오븐', 'toaster': '토스터', 'sink': '싱크대',
-      'refrigerator': '냉장고', 'book': '책', 'clock': '시계', 'vase': '꽃병',
-      'scissors': '가위', 'teddy bear': '곰인형', 'hair drier': '헤어드라이어', 'toothbrush': '칫솔'
-    };
-
     async function detect2B() {
       if (!cocoModel) return;
 
-      const displayWidth = img2B.clientWidth;
-      const displayHeight = img2B.clientHeight;
-
-      canvas2B.width = displayWidth;
-      canvas2B.height = displayHeight;
-
+      // 캔버스를 이미지 표시 영역 위치에 직접 밀착
+      canvas2B.width = img2B.clientWidth;
+      canvas2B.height = img2B.clientHeight;
       canvas2B.style.position = 'absolute';
       canvas2B.style.left = img2B.offsetLeft + 'px';
       canvas2B.style.top = img2B.offsetTop + 'px';
@@ -524,37 +496,34 @@
       const tableBody = document.getElementById('table2B');
       tableBody.innerHTML = '';
 
-      const scaleX = displayWidth / img2B.naturalWidth;
-      const scaleY = displayHeight / img2B.naturalHeight;
+      const scaleX = img2B.clientWidth / img2B.naturalWidth;
+      const scaleY = img2B.clientHeight / img2B.naturalHeight;
 
       predictions.forEach(p => {
         const [x, y, w, h] = p.bbox;
-
         const rx = x * scaleX;
         const ry = y * scaleY;
         const rw = w * scaleX;
         const rh = h * scaleY;
 
-        // 사전에 한글 이름이 있으면 한글로, 없으면 기존 영문 표기
-        const classNameKor = labelKor[p.class] || p.class;
+        const nameKor = labelKor[p.class] || p.class;
 
-        // 초록색 테두리 상자 그리기
+        // 박스
         ctx2B.strokeStyle = '#00e676';
         ctx2B.lineWidth = 3;
         ctx2B.strokeRect(rx, ry, rw, rh);
 
-        // 한글 라벨 텍스트 바 그리기
+        // 한글 라벨
         ctx2B.fillStyle = '#00e676';
         ctx2B.font = 'bold 13px sans-serif';
-        const label = `${classNameKor} (${Math.round(p.score * 100)}%)`;
+        const label = `${nameKor} (${Math.round(p.score * 100)}%)`;
         const textWidth = ctx2B.measureText(label).width;
 
         ctx2B.fillRect(rx, ry > 20 ? ry - 20 : ry, textWidth + 8, 20);
         ctx2B.fillStyle = '#000000';
         ctx2B.fillText(label, rx + 4, ry > 20 ? ry - 5 : ry + 15);
 
-        // 오른쪽 결과 표에 한글 출력
-        tableBody.innerHTML += `<tr><td><b>${classNameKor}</b></td><td>${Math.round(p.score * 100)}%</td></tr>`;
+        tableBody.innerHTML += `<tr><td><b>${nameKor}</b></td><td>${Math.round(p.score * 100)}%</td></tr>`;
       });
 
       if (predictions.length === 0) {
@@ -562,7 +531,7 @@
       }
     }
 
-    // --- Section 3: AI Games ---
+    // AI Games
     let cameraG1;
     const handsG1 = new Hands({ locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
     handsG1.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
