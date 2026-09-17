@@ -499,9 +499,12 @@
     async function detect2B() {
       if (!cocoModel) return;
 
-      // 핵심: 캔버스 크기를 이미지의 '실제 원본 해상도'로 고정하여 좌표 연산 오차 0%화
-      canvas2B.width = img2B.naturalWidth;
-      canvas2B.height = img2B.naturalHeight;
+      // 캔버스 크기를 화면에 표시된 이미지 크기와 1:1로 일치
+      canvas2B.width = img2B.clientWidth;
+      canvas2B.height = img2B.clientHeight;
+      canvas2B.style.position = 'absolute';
+      canvas2B.style.top = '0';
+      canvas2B.style.left = '0';
 
       ctx2B.clearRect(0, 0, canvas2B.width, canvas2B.height);
 
@@ -509,23 +512,33 @@
       const tableBody = document.getElementById('table2B');
       tableBody.innerHTML = '';
 
+      // Mode A와 동일한 좌표 스케일링 비율 계산
+      const scaleX = img2B.clientWidth / (img2B.naturalWidth || img2B.clientWidth);
+      const scaleY = img2B.clientHeight / (img2B.naturalHeight || img2B.clientHeight);
+
       predictions.forEach(p => {
         const [x, y, w, h] = p.bbox;
+        const rx = x * scaleX;
+        const ry = y * scaleY;
+        const rw = w * scaleX;
+        const rh = h * scaleY;
+
         const nameKor = labelKor[p.class] || p.class;
 
-        // 원본 해상도 기준 그리기
+        // 초록색 박스
         ctx2B.strokeStyle = '#00e676';
-        ctx2B.lineWidth = 6; // 고해상도 고려 두께 확장
-        ctx2B.strokeRect(x, y, w, h);
+        ctx2B.lineWidth = 3;
+        ctx2B.strokeRect(rx, ry, rw, rh);
 
+        // 한글 라벨 박스
         ctx2B.fillStyle = '#00e676';
-        ctx2B.font = 'bold 24px sans-serif';
+        ctx2B.font = 'bold 13px sans-serif';
         const label = `${nameKor} (${Math.round(p.score * 100)}%)`;
         const textWidth = ctx2B.measureText(label).width;
 
-        ctx2B.fillRect(x, y > 35 ? y - 35 : y, textWidth + 12, 35);
+        ctx2B.fillRect(rx, ry > 20 ? ry - 20 : ry, textWidth + 8, 20);
         ctx2B.fillStyle = '#000000';
-        ctx2B.fillText(label, x + 6, y > 35 ? y - 10 : y + 25);
+        ctx2B.fillText(label, rx + 4, ry > 20 ? ry - 5 : ry + 15);
 
         tableBody.innerHTML += `<tr><td><b>${nameKor}</b></td><td>${Math.round(p.score * 100)}%</td></tr>`;
       });
@@ -534,7 +547,6 @@
         tableBody.innerHTML = '<tr><td colspan="2">탐지된 객체가 없습니다.</td></tr>';
       }
     }
-
     // Section 3
     let cameraG1;
     const handsG1 = new Hands({ locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
