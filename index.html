@@ -42,12 +42,12 @@
       overflow: hidden; 
       text-align: center;
     }
+    /* 기존 스타일에서 object-fit: cover; 로 변경하여 여백 제거 */
     .media-wrapper img, .media-wrapper video { 
-      display: block; 
       width: 100%; 
-      height: auto; 
-      max-height: 420px; 
-      object-fit: contain; 
+      height: 100%; 
+      object-fit: cover; /* 이미지를 상자에 여백 없이 딱 맞춤 */
+      display: block; 
     }
     canvas { 
       position: absolute; 
