@@ -36,10 +36,10 @@
     .card { background: white; border-radius: 8px; border: 1px solid #e0e0e0; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .card-title { font-size: 18px; font-weight: bold; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 15px; color: #0056b3; }
 
-    /* Media Area */
+    /* Media Area - 이미지와 캔버스 정밀 위치 정렬 */
     .media-wrapper { position: relative; width: 100%; height: 420px; background: #000; display: flex; justify-content: center; align-items: center; border-radius: 6px; overflow: hidden; }
-    video, img { max-width: 100%; max-height: 100%; object-fit: contain; }
-    canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+    .media-wrapper img, .media-wrapper video { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+    canvas { position: absolute; pointer-events: none; }
 
     /* Elements & UI */
     .controls { margin-top: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
@@ -155,10 +155,10 @@
         <div class="card">
           <div class="card-title">🖼️ 샘플 이미지 분석 (교재용)</div>
           <div class="sample-images">
-            <img src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=600" class="sample-img selected" title="거실 공간" onclick="selectSample2B(this)">
-            <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600" class="sample-img" title="사람과 동물" onclick="selectSample2B(this)">
-            <img src="https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=600" class="sample-img" title="강아지" onclick="selectSample2B(this)">
-            <img src="https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600" class="sample-img" title="책상 소품" onclick="selectSample2B(this)">
+            <img src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800" class="sample-img selected" title="거실 공간" onclick="selectSample2B(this)">
+            <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800" class="sample-img" title="사람과 동물" onclick="selectSample2B(this)">
+            <img src="https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=800" class="sample-img" title="강아지" onclick="selectSample2B(this)">
+            <img src="https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800" class="sample-img" title="책상 소품" onclick="selectSample2B(this)">
           </div>
           <div style="font-size: 13px; margin-bottom: 10px;">
             내 사진 직접 올리기: <input type="file" id="upload2B" accept="image/*">
@@ -197,7 +197,7 @@
         <button class="tab-btn" onclick="switchGame('game2', this)">🔍 Game 2: AI 보물찾기</button>
       </div>
 
-      <!-- Game 1: 가위바위보 -->
+      <!-- Game 1 -->
       <div id="game1" class="mode-panel active grid-2">
         <div class="card">
           <div class="card-title">✊✌️🖐️ AI vs 나: 가위바위보</div>
@@ -220,7 +220,7 @@
         </div>
       </div>
 
-      <!-- Game 2: AI 보물찾기 -->
+      <!-- Game 2 -->
       <div id="game2" class="mode-panel grid-2">
         <div class="card">
           <div class="card-title">🔍 AI 보물찾기 (Scavenger Hunt)</div>
@@ -395,6 +395,7 @@
     async function detectFrame2A() {
       if (!cocoModel) return;
       const target = isWebcam2A ? video2A : img2A;
+      
       canvas2A.width = target.clientWidth;
       canvas2A.height = target.clientHeight;
 
@@ -405,8 +406,8 @@
       const tableBody = document.getElementById('table2A');
       tableBody.innerHTML = '';
 
-      const scaleX = target.clientWidth / (isWebcam2A ? video2A.videoWidth : img2A.naturalWidth);
-      const scaleY = target.clientHeight / (isWebcam2A ? video2A.videoHeight : img2A.naturalHeight);
+      const scaleX = target.clientWidth / (isWebcam2A ? video2A.videoWidth : (img2A.naturalWidth || target.clientWidth));
+      const scaleY = target.clientHeight / (isWebcam2A ? video2A.videoHeight : (img2A.naturalHeight || target.clientHeight));
 
       predictions.filter(p => p.score >= minScore).forEach(p => {
         const [x, y, w, h] = p.bbox;
@@ -460,7 +461,7 @@
       reader.readAsDataURL(e.target.files[0]);
     };
 
-    // --- Mode B: 수정된 보정 코드 적용 ---
+    // --- Mode B: 좌표 배율 완벽 보정 ---
     const img2B = document.getElementById('image2B');
     const canvas2B = document.getElementById('canvas2B');
     const ctx2B = canvas2B.getContext('2d');
@@ -484,15 +485,23 @@
 
     async function detect2B() {
       if (!cocoModel) return;
-      
+
+      // 이미지 요소의 화면상 실제 오프셋과 크기를 가져와 캔버스 오버레이 맞춤
+      const rect = img2B.getBoundingClientRect();
+      const parentRect = img2B.parentElement.getBoundingClientRect();
+
       canvas2B.width = img2B.clientWidth;
       canvas2B.height = img2B.clientHeight;
+      canvas2B.style.left = (img2B.offsetLeft) + 'px';
+      canvas2B.style.top = (img2B.offsetTop) + 'px';
+
       ctx2B.clearRect(0, 0, canvas2B.width, canvas2B.height);
 
       const predictions = await cocoModel.detect(img2B);
       const tableBody = document.getElementById('table2B');
       tableBody.innerHTML = '';
 
+      // 원본 이미지 해상도 대비 화면 크기 비율 정밀 계산
       const scaleX = img2B.clientWidth / img2B.naturalWidth;
       const scaleY = img2B.clientHeight / img2B.naturalHeight;
 
