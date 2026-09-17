@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>고교생을 위한 AI 컴퓨터 비전 실습실</title>
+  
+  <!-- AI 라이브러리 (MediaPipe & TensorFlow.js) -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #f4f6f9; color: #333; }
+
+    /* Header & GNB */
+    header { background: #1a2a3a; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 20px; font-weight: bold; }
+    nav { display: flex; gap: 10px; }
+    .nav-btn { background: none; border: none; color: #cfd8dc; padding: 10px 15px; font-size: 15px; cursor: pointer; border-bottom: 3px solid transparent; transition: 0.2s; }
+    .nav-btn:hover, .nav-btn.active { color: #4fc3f7; border-bottom-color: #4fc3f7; font-weight: bold; }
+
+    /* Sub Tabs */
+    .sub-tabs { background: #0056b3; padding: 10px 20px; display: flex; gap: 10px; border-radius: 6px; margin-bottom: 20px; }
+    .tab-btn { background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .tab-btn.active { background: white; color: #0056b3; }
+
+    /* Layout */
+    .content-container { max-width: 1200px; margin: 25px auto; padding: 0 15px; }
+    .page-section { display: none; }
+    .page-section.active { display: block; }
+    .grid-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .card { background: white; border-radius: 8px; border: 1px solid #e0e0e0; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .card-title { font-size: 18px; font-weight: bold; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 15px; color: #0056b3; }
+
+    /* Media Area */
+    .media-wrapper { position: relative; width: 100%; height: 420px; background: #000; display: flex; justify-content: center; align-items: center; border-radius: 6px; overflow: hidden; }
+    video, img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+
+    /* Elements & UI */
+    .controls { margin-top: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .btn { background: #0056b3; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+    .btn:hover { background: #003d80; }
+    .sample-images { display: flex; gap: 10px; margin-bottom: 12px; }
+    .sample-img { width: 80px; height: 60px; object-fit: cover; border: 2px solid transparent; border-radius: 4px; cursor: pointer; }
+    .sample-img.selected { border-color: #0056b3; }
+
+    /* Table & Activity */
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+    th, td { border: 1px solid #e0e0e0; padding: 8px; text-align: center; }
+    th { background: #f8f9fa; }
+    .activity-box { background: #e3f2fd; border: 1px solid #bbdefb; padding: 12px; border-radius: 6px; margin-top: 15px; font-size: 13px; }
+    .activity-box textarea { width: 100%; height: 45px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; padding: 5px; resize: none; }
+    
+    .mode-panel { display: none; }
+    .mode-panel.active { display: grid; }
+    .status-text { font-weight: bold; font-size: 13px; color: #e67e22; }
+
+    /* Game UI Elements */
+    .game-score-box { background: #eef2f5; padding: 15px; border-radius: 6px; font-size: 18px; font-weight: bold; text-align: center; margin-bottom: 15px; }
+    .game-result { font-size: 24px; font-weight: bold; color: #d63031; text-align: center; margin-top: 10px; }
+
+    /* Concept Guide Style */
+    .concept-card { background: #fff; border-top: 4px solid #0056b3; }
+    .concept-card h3 { font-size: 16px; color: #0056b3; margin-bottom: 10px; }
+    .concept-card p { font-size: 13px; color: #555; line-height: 1.6; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🤖 고교생을 위한 AI 컴퓨터 비전 실습실</h1>
+    <nav>
+      <button class="nav-btn active" onclick="showSection('sec1', this)">1. 손가락 추적</button>
+      <button class="nav-btn" onclick="showSection('sec2', this)">2. 사물 탐지 및 분석</button>
+      <button class="nav-btn" onclick="showSection('sec3', this)">3. AI 비전 게임 존</button>
+      <button class="nav-btn" onclick="showSection('sec4', this)">4. 비전 원리</button>
+    </nav>
+  </header>
+
+  <div class="content-container">
+
+    <!-- SECTION 1: 손가락 추적 -->
+    <section id="sec1" class="page-section active">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">🖐️ 실시간 손가락 랜드마크 추적</div>
+          <div class="media-wrapper">
+            <video id="webcam1" autoplay playsinline style="display:none;"></video>
+            <img id="image1" src="https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=800" crossorigin="anonymous">
+            <canvas id="canvas1" width="640" height="480"></canvas>
+          </div>
+          <div class="controls">
+            <button class="btn" onclick="startHandTracking()">카메라 시작</button>
+            <button class="btn" onclick="stopHandTracking()">카메라 중지</button>
+            <span id="status1" class="status-text">웹캠 연결 없이 샘플 이미지로 작동합니다.</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">💡 기술 원리 & 좌표 데이터</div>
+          <p style="font-size:13px; line-height:1.5; margin-bottom:15px;">
+            AI가 손에서 21개의 주요 관절 마디(Landmark)를 찾아내어 좌표 데이터로 변환합니다.
+          </p>
+          <div style="background:#2d3436; color:#00ff00; padding:10px; border-radius:6px; font-family:monospace; font-size:12px; height:200px; overflow-y:auto;" id="coordsData">
+            [좌표 데이터가 여기에 출력됩니다]
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: 사물 탐지 및 분석 -->
+    <section id="sec2" class="page-section">
+      <div class="sub-tabs">
+        <button class="tab-btn active" onclick="switchMode('modeA', this)">Mode A: 실시간 사물 인식</button>
+        <button class="tab-btn" onclick="switchMode('modeB', this)">Mode B: 이미지 분석 & 함께 해결하기 (교재)</button>
+      </div>
+
+      <!-- Mode A -->
+      <div id="modeA" class="mode-panel active grid-2">
+        <div class="card">
+          <div class="card-title">🎥 실시간 사물 인식 (웹캠 / 파일)</div>
+          <div class="media-wrapper">
+            <video id="webcam2A" autoplay playsinline style="display:none;"></video>
+            <img id="image2A" src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800" crossorigin="anonymous">
+            <canvas id="canvas2A"></canvas>
+          </div>
+          <div class="controls">
+            <button class="btn" onclick="startWebcam2A()">웹캠 켜기</button>
+            <button class="btn" onclick="stopWebcam2A()">웹캠 끄기</button>
+            <input type="file" id="upload2A" accept="image/*">
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">⚙️ 파라미터 조절 & 결과</div>
+          <p style="font-size: 13px; margin-bottom: 10px;">
+            신뢰도 Threshold: <span id="threshVal">50</span>%<br>
+            <input type="range" id="threshSlider" min="10" max="90" value="50" style="width: 100%;">
+          </p>
+          <div id="status2A" class="status-text">AI 모델 준비 중...</div>
+          <table>
+            <thead><tr><th>탐지 객체</th><th>확률</th></tr></thead>
+            <tbody id="table2A"><tr><td colspan="2">데이터 없음</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Mode B -->
+      <div id="modeB" class="mode-panel grid-2">
+        <div class="card">
+          <div class="card-title">🖼️ 샘플 이미지 분석 (교재용)</div>
+          <div class="sample-images">
+            <img src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=600" class="sample-img selected" title="거실 공간" onclick="selectSample2B(this)">
+            <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600" class="sample-img" title="사람과 동물" onclick="selectSample2B(this)">
+            <img src="https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=600" class="sample-img" title="강아지" onclick="selectSample2B(this)">
+            <img src="https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600" class="sample-img" title="책상 소품" onclick="selectSample2B(this)">
+          </div>
+          <div style="font-size: 13px; margin-bottom: 10px;">
+            내 사진 직접 올리기: <input type="file" id="upload2B" accept="image/*">
+          </div>
+          <div class="media-wrapper">
+            <img id="image2B" src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800" crossorigin="anonymous">
+            <canvas id="canvas2B"></canvas>
+          </div>
+          <div class="controls">
+            <button class="btn" onclick="detect2B()">분석하기</button>
+            <span id="status2B" class="status-text"></span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📊 탐지 결과 & 교재 활동</div>
+          <table>
+            <thead><tr><th>탐지된 객체</th><th>신뢰도</th></tr></thead>
+            <tbody id="table2B"><tr><td colspan="2">분석 버튼을 누르세요.</td></tr></tbody>
+          </table>
+          <div class="activity-box">
+            <h4>📝 함께 해결하기 (교재 활동지)</h4>
+            <p>1. 눈으로 보이지만 탐지하지 못한 객체는?</p>
+            <textarea placeholder="예: 구석의 조명등"></textarea>
+            <p style="margin-top: 5px;">2. 탐지하지 못한 이유는?</p>
+            <textarea placeholder="예: 배경과 색상이 비슷함"></textarea>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: AI 비전 게임 존 -->
+    <section id="sec3" class="page-section">
+      <div class="sub-tabs">
+        <button class="tab-btn active" onclick="switchGame('game1', this)">🎮 Game 1: AI 가위바위보</button>
+        <button class="tab-btn" onclick="switchGame('game2', this)">🔍 Game 2: AI 보물찾기</button>
+      </div>
+
+      <!-- Game 1: 가위바위보 -->
+      <div id="game1" class="mode-panel active grid-2">
+        <div class="card">
+          <div class="card-title">✊✌️🖐️ AI vs 나: 가위바위보</div>
+          <div class="media-wrapper">
+            <video id="webcamG1" autoplay playsinline></video>
+            <canvas id="canvasG1" width="640" height="480"></canvas>
+          </div>
+          <div class="controls">
+            <button class="btn" onclick="startGame1()">게임 시작 (카메라)</button>
+            <button class="btn" onclick="stopGame1()">카메라 중지</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🏆 승패 판정 결과</div>
+          <div class="game-score-box">
+            내 손 모양: <span id="myHandText" style="color:#0056b3;">대기 중</span>
+          </div>
+          <div class="game-result" id="rpsResult">카메라를 켜세요!</div>
+        </div>
+      </div>
+
+      <!-- Game 2: AI 보물찾기 -->
+      <div id="game2" class="mode-panel grid-2">
+        <div class="card">
+          <div class="card-title">🔍 AI 보물찾기 (Scavenger Hunt)</div>
+          <div class="media-wrapper">
+            <video id="webcamG2" autoplay playsinline></video>
+            <canvas id="canvasG2" width="640" height="480"></canvas>
+          </div>
+          <div class="controls">
+            <button class="btn" onclick="nextMissionGame2()">게임 시작 / 다음 미션</button>
+            <button class="btn" onclick="stopGame2()">카메라 중지</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🎯 미션 & 점수판</div>
+          <div class="game-score-box">
+            미션: <span id="targetItemG2" style="color:#d63031;">[버튼 클릭]</span><br><br>
+            현재 점수: <span id="scoreG2" style="color:#0056b3; font-size:24px;">0</span> 점
+          </div>
+          <div class="game-result" id="huntResult">카메라에 물건을 비추세요!</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: 컴퓨터 비전 원리 가이드 -->
+    <section id="sec4" class="page-section">
+      <div class="card">
+        <div class="card-title">💡 컴퓨터 비전(Computer Vision) 핵심 개념 학습 가이드</div>
+        <p style="font-size: 14px; margin-bottom: 20px; color: #666;">
+          AI가 디지털 이미지를 이해하고 분석하는 핵심 원리 3가지를 정리했습니다.
+        </p>
+
+        <div class="grid-3">
+          <div class="card concept-card">
+            <h3>1. 이미지 가공 & 픽셀 데이터</h3>
+            <p>
+              컴퓨터는 사람처럼 눈으로 보는 것이 아니라 **행렬 수치(0~255)**로 이미지를 처리합니다. RGB 3색의 수치 조합으로 사물의 색상과 테두리를 인식합니다.
+            </p>
+          </div>
+
+          <div class="card concept-card">
+            <h3>2. 객체 탐지 (Object Detection)</h3>
+            <p>
+              사물의 위치를 찾아내는 **Bounding Box**와 해당 사물의 종류를 판별하는 **Classification**이 결합되어 동작합니다.
+            </p>
+          </div>
+
+          <div class="card concept-card">
+            <h3>3. 신뢰도 (Confidence Score)</h3>
+            <p>
+              AI가 해당 탐지 결과를 얼마나 확신하는지 확률(%)로 나타낸 지표입니다. 임계값(Threshold)을 조정하여 탐지 민감도를 조절할 수 있습니다.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    // --- Global Nav Controls ---
+    function showSection(sectionId, btn) {
+      document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(sectionId).classList.add('active');
+      btn.classList.add('active');
+      stopHandTracking();
+      stopWebcam2A();
+      stopGame1();
+      stopGame2();
+    }
+
+    function switchMode(modeId, btn) {
+      document.querySelectorAll('#sec2 .mode-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('#sec2 .tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(modeId).classList.add('active');
+      btn.classList.add('active');
+      stopWebcam2A();
+    }
+
+    function switchGame(gameId, btn) {
+      document.querySelectorAll('#sec3 .mode-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('#sec3 .tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(gameId).classList.add('active');
+      btn.classList.add('active');
+      stopGame1();
+      stopGame2();
+    }
+
+    // --- Section 1: Hand Tracking ---
+    let camera1;
+    const hands1 = new Hands({ locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
+    hands1.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    
+    hands1.onResults(results => {
+      const canvas = document.getElementById('canvas1');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        const landmarks = results.multiHandLandmarks[0];
+        document.getElementById('coordsData').innerText = `손가락 좌표 (Point 0):\nX: ${landmarks[0].x.toFixed(3)}\nY: ${landmarks[0].y.toFixed(3)}\nZ: ${landmarks[0].z.toFixed(3)}`;
+        
+        for (const pt of landmarks) {
+          ctx.beginPath();
+          ctx.arc(pt.x * canvas.width, pt.y * canvas.height, 5, 0, 2 * Math.PI);
+          ctx.fillStyle = '#00FF00';
+          ctx.fill();
+        }
+      }
+    });
+
+    window.addEventListener('load', () => {
+      const img1 = document.getElementById('image1');
+      img1.onload = () => {
+        document.getElementById('canvas1').width = img1.clientWidth;
+        document.getElementById('canvas1').height = img1.clientHeight;
+        hands1.send({ image: img1 });
+      };
+    });
+
+    function startHandTracking() {
+      const video = document.getElementById('webcam1');
+      document.getElementById('image1').style.display = 'none';
+      video.style.display = 'block';
+      camera1 = new Camera(video, {
+        onFrame: async () => { await hands1.send({ image: video }); },
+        width: 640, height: 480
+      });
+      camera1.start();
+      document.getElementById('status1').innerText = "✅ 카메라 작동 중";
+      document.getElementById('status1').style.color = "green";
+    }
+
+    function stopHandTracking() {
+      if (camera1) { camera1.stop(); }
+      document.getElementById('webcam1').style.display = 'none';
+      document.getElementById('image1').style.display = 'block';
+      document.getElementById('status1').innerText = "카메라 중지됨";
+      document.getElementById('status1').style.color = "#e67e22";
+    }
+
+    // --- Section 2: Object Detection ---
+    let cocoModel;
+    let isWebcam2A = false;
+    let animId2A;
+
+    cocoSsd.load().then(m => {
+      cocoModel = m;
+      document.getElementById('status2A').innerText = "✅ AI 준비 완료";
+      document.getElementById('status2A').style.color = "green";
+      detectFrame2A();
+    });
+
+    const img2A = document.getElementById('image2A');
+    const video2A = document.getElementById('webcam2A');
+    const canvas2A = document.getElementById('canvas2A');
+    const ctx2A = canvas2A.getContext('2d');
+    const slider = document.getElementById('threshSlider');
+
+    slider.oninput = () => {
+      document.getElementById('threshVal').innerText = slider.value;
+      if(!isWebcam2A) detectFrame2A();
+    };
+
+    async function detectFrame2A() {
+      if (!cocoModel) return;
+      const target = isWebcam2A ? video2A : img2A;
+      canvas2A.width = target.clientWidth;
+      canvas2A.height = target.clientHeight;
+
+      const predictions = await cocoModel.detect(target);
+      const minScore = slider.value / 100;
+      
+      ctx2A.clearRect(0, 0, canvas2A.width, canvas2A.height);
+      const tableBody = document.getElementById('table2A');
+      tableBody.innerHTML = '';
+
+      const scaleX = canvas2A.width / (isWebcam2A ? video2A.videoWidth : img2A.naturalWidth);
+      const scaleY = canvas2A.height / (isWebcam2A ? video2A.videoHeight : img2A.naturalHeight);
+
+      predictions.filter(p => p.score >= minScore).forEach(p => {
+        const [x, y, w, h] = p.bbox;
+        ctx2A.strokeStyle = '#00FF00';
+        ctx2A.lineWidth = 3;
+        ctx2A.strokeRect(x * scaleX, y * scaleY, w * scaleX, h * scaleY);
+        
+        ctx2A.fillStyle = '#00FF00';
+        ctx2A.font = '14px Arial';
+        ctx2A.fillText(`${p.class} (${Math.round(p.score * 100)}%)`, x * scaleX + 5, y * scaleY + 15);
+
+        tableBody.innerHTML += `<tr><td>${p.class}</td><td>${Math.round(p.score * 100)}%</td></tr>`;
+      });
+
+      if (isWebcam2A) animId2A = requestAnimationFrame(detectFrame2A);
+    }
+
+    function startWebcam2A() {
+      navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+        isWebcam2A = true;
+        img2A.style.display = 'none';
+        video2A.style.display = 'block';
+        video2A.srcObject = stream;
+        video2A.onloadeddata = () => detectFrame2A();
+      }).catch(() => alert("카메라를 연결할 수 없습니다."));
+    }
+
+    function stopWebcam2A() {
+      if (video2A.srcObject) {
+        video2A.srcObject.getTracks().forEach(t => t.stop());
+        video2A.style.display = 'none';
+        img2A.style.display = 'block';
+        isWebcam2A = false;
+        cancelAnimationFrame(animId2A);
+        ctx2A.clearRect(0, 0, canvas2A.width, canvas2A.height);
+      }
+    }
+
+    document.getElementById('upload2A').onchange = (e) => {
+      stopWebcam2A();
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        img2A.src = evt.target.result;
+        img2A.onload = () => detectFrame2A();
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    };
+
+    const img2B = document.getElementById('image2B');
+    const canvas2B = document.getElementById('canvas2B');
+    const ctx2B = canvas2B.getContext('2d');
+
+    function selectSample2B(el) {
+      document.querySelectorAll('.sample-img').forEach(i => i.classList.remove('selected'));
+      el.classList.add('selected');
+      img2B.src = el.src;
+      ctx2B.clearRect(0, 0, canvas2B.width, canvas2B.height);
+      document.getElementById('table2B').innerHTML = '<tr><td colspan="2">분석 버튼을 누르세요.</td></tr>';
+    }
+
+    document.getElementById('upload2B').onchange = (e) => {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        img2B.src = evt.target.result;
+        ctx2B.clearRect(0, 0, canvas2B.width, canvas2B.height);
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    };
+
+    async function detect2B() {
+      if (!cocoModel) return;
+      canvas2B.width = img2B.clientWidth;
+      canvas2B.height = img2B.clientHeight;
+      ctx2B.clearRect(0, 0, canvas2B.width, canvas2B.height);
+
+      const predictions = await cocoModel.detect(img2B);
+      const tableBody = document.getElementById('table2B');
+      tableBody.innerHTML = '';
+
+      const scaleX = canvas2B.width / img2B.naturalWidth;
+      const scaleY = canvas2B.height / img2B.naturalHeight;
+
+      predictions.forEach(p => {
+        const [x, y, w, h] = p.bbox;
+        ctx2B.strokeStyle = '#00e676';
+        ctx2B.lineWidth = 3;
+        ctx2B.strokeRect(x * scaleX, y * scaleY, w * scaleX, h * scaleY);
+
+        tableBody.innerHTML += `<tr><td><b>${p.class}</b></td><td>${Math.round(p.score * 100)}%</td></tr>`;
+      });
+    }
+
+    // --- Section 3: AI Games ---
+    let cameraG1;
+    const handsG1 = new Hands({ locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
+    handsG1.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+
+    handsG1.onResults(results => {
+      const canvas = document.getElementById('canvasG1');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        const landmarks = results.multiHandLandmarks[0];
+        
+        const isIndexOpen = landmarks[8].y < landmarks[6].y;
+        const isMiddleOpen = landmarks[12].y < landmarks[10].y;
+        const isRingOpen = landmarks[16].y < landmarks[14].y;
+        const isPinkyOpen = landmarks[20].y < landmarks[18].y;
+
+        let handState = "주먹 ✊";
+        if (isIndexOpen && isMiddleOpen && !isRingOpen && !isPinkyOpen) {
+          handState = "가위 ✌️";
+        } else if (isIndexOpen && isMiddleOpen && isRingOpen && isPinkyOpen) {
+          handState = "보 🖐️";
+        }
+
+        document.getElementById('myHandText').innerText = handState;
+        document.getElementById('rpsResult').innerText = `AI 인식: ${handState}`;
+
+        for (const pt of landmarks) {
+          ctx.beginPath();
+          ctx.arc(pt.x * canvas.width, pt.y * canvas.height, 4, 0, 2 * Math.PI);
+          ctx.fillStyle = '#00FF00';
+          ctx.fill();
+        }
+      }
+    });
+
+    function startGame1() {
+      const video = document.getElementById('webcamG1');
+      cameraG1 = new Camera(video, {
+        onFrame: async () => { await handsG1.send({ image: video }); },
+        width: 640, height: 480
+      });
+      cameraG1.start();
+    }
+
+    function stopGame1() {
+      if (cameraG1) { cameraG1.stop(); }
+    }
+
+    let isPlayingG2 = false;
+    let scoreG2 = 0;
+    const targetsG2 = ['cell phone', 'cup', 'book', 'bottle', 'chair', 'person'];
+    const targetKorG2 = {'cell phone':'휴대폰', 'cup':'컵', 'book':'책', 'bottle':'물병', 'chair':'의자', 'person':'사람'};
+    let currentTargetG2 = '';
+
+    const videoG2 = document.getElementById('webcamG2');
+    const canvasG2 = document.getElementById('canvasG2');
+    const ctxG2 = canvasG2.getContext('2d');
+
+    function nextMissionGame2() {
+      if(!cocoModel) return;
+      navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+        videoG2.srcObject = stream;
+        currentTargetG2 = targetsG2[Math.floor(Math.random() * targetsG2.length)];
+        document.getElementById('targetItemG2').innerText = `${targetKorG2[currentTargetG2]} (${currentTargetG2})`;
+        document.getElementById('huntResult').innerText = "보물을 탐색하는 중...";
+        isPlayingG2 = true;
+        gameLoopG2();
+      });
+    }
+
+    async function gameLoopG2() {
+      if (!isPlayingG2) return;
+      canvasG2.width = videoG2.clientWidth;
+      canvasG2.height = videoG2.clientHeight;
+
+      const predictions = await cocoModel.detect(videoG2);
+      ctxG2.clearRect(0, 0, canvasG2.width, canvasG2.height);
+
+      predictions.forEach(p => {
+        const isMatch = p.class === currentTargetG2;
+        ctxG2.strokeStyle = isMatch ? '#00e676' : '#ff1744';
+        ctxG2.lineWidth = 3;
+        ctx2A.strokeRect(...p.bbox);
+
+        if (isMatch && p.score > 0.65) {
+          scoreG2 += 10;
+          document.getElementById('scoreG2').innerText = scoreG2;
+          document.getElementById('huntResult').innerText = `🎉 성공! ${targetKorG2[currentTargetG2]} 발견! (+10점)`;
+          isPlayingG2 = false;
+        }
+      });
+
+      if (isPlayingG2) requestAnimationFrame(gameLoopG2);
+    }
+
+    function stopGame2() {
+      if (videoG2.srcObject) {
+        videoG2.srcObject.getTracks().forEach(t => t.stop());
+        isPlayingG2 = false;
+      }
+    }
+  </script>
+</body>
+</html>
