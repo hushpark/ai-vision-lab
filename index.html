@@ -32,29 +32,29 @@
     .card { background: white; border-radius: 8px; border: 1px solid #e0e0e0; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .card-title { font-size: 18px; font-weight: bold; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 15px; color: #0056b3; }
 
-    /* 핵심 수정: 이미지 원본 크기 레이아웃 유지 */
+    /* 미디어 영역 - 여백 및 정렬 고정 */
     .media-wrapper { 
       position: relative; 
-      display: inline-block; 
       width: 100%; 
+      height: 420px; 
       background: #1e1e1e; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
       border-radius: 6px; 
       overflow: hidden; 
-      text-align: center;
     }
-    /* 기존 스타일에서 object-fit: cover; 로 변경하여 여백 제거 */
     .media-wrapper img, .media-wrapper video { 
-      width: 100%; 
-      height: 100%; 
-      object-fit: cover; /* 이미지를 상자에 여백 없이 딱 맞춤 */
+      max-width: 100%; 
+      max-height: 420px; 
+      object-fit: contain; 
       display: block; 
+      margin: 0 auto;
     }
     canvas { 
       position: absolute; 
       top: 0; 
       left: 0; 
-      width: 100%; 
-      height: 100%; 
       pointer-events: none; 
     }
 
@@ -353,8 +353,8 @@
       const img1 = document.getElementById('image1');
       img1.onload = () => {
         const canvas = document.getElementById('canvas1');
-        canvas.width = img1.naturalWidth;
-        canvas.height = img1.naturalHeight;
+        canvas.width = img1.clientWidth;
+        canvas.height = img1.clientHeight;
         hands1.send({ image: img1 });
       };
     });
@@ -366,8 +366,8 @@
       video.style.display = 'block';
       camera1 = new Camera(video, {
         onFrame: async () => { 
-          canvas.width = video.videoWidth || 640;
-          canvas.height = video.videoHeight || 480;
+          canvas.width = video.clientWidth;
+          canvas.height = video.clientHeight;
           await hands1.send({ image: video }); 
         },
         width: 640, height: 480
@@ -411,12 +411,10 @@
     async function detectFrame2A() {
       if (!cocoModel) return;
       const target = isWebcam2A ? video2A : img2A;
-      
-      const naturalW = isWebcam2A ? video2A.videoWidth : img2A.naturalWidth;
-      const naturalH = isWebcam2A ? video2A.videoHeight : img2A.naturalHeight;
+      const wrapper = target.parentElement;
 
-      canvas2A.width = naturalW;
-      canvas2A.height = naturalH;
+      canvas2A.width = wrapper.clientWidth;
+      canvas2A.height = wrapper.clientHeight;
 
       const predictions = await cocoModel.detect(target);
       const minScore = slider.value / 100;
@@ -425,17 +423,35 @@
       const tableBody = document.getElementById('table2A');
       tableBody.innerHTML = '';
 
+      const naturalW = isWebcam2A ? video2A.videoWidth : (img2A.naturalWidth || wrapper.clientWidth);
+      const naturalH = isWebcam2A ? video2A.videoHeight : (img2A.naturalHeight || wrapper.clientHeight);
+
+      const scaleX = wrapper.clientWidth / naturalW;
+      const scaleY = wrapper.clientHeight / naturalH;
+      const scale = Math.min(scaleX, scaleY);
+
+      const renderWidth = naturalW * scale;
+      const renderHeight = naturalH * scale;
+
+      const offsetX = (wrapper.clientWidth - renderWidth) / 2;
+      const offsetY = (wrapper.clientHeight - renderHeight) / 2;
+
       predictions.filter(p => p.score >= minScore).forEach(p => {
         const [x, y, w, h] = p.bbox;
+        const rx = x * scale + offsetX;
+        const ry = y * scale + offsetY;
+        const rw = w * scale;
+        const rh = h * scale;
+
         const nameKor = labelKor[p.class] || p.class;
 
         ctx2A.strokeStyle = '#00FF00';
-        ctx2A.lineWidth = 4;
-        ctx2A.strokeRect(x, y, w, h);
+        ctx2A.lineWidth = 3;
+        ctx2A.strokeRect(rx, ry, rw, rh);
         
         ctx2A.fillStyle = '#00FF00';
-        ctx2A.font = 'bold 20px Arial';
-        ctx2A.fillText(`${nameKor} (${Math.round(p.score * 100)}%)`, x + 5, y > 25 ? y - 10 : y + 25);
+        ctx2A.font = 'bold 13px Arial';
+        ctx2A.fillText(`${nameKor} (${Math.round(p.score * 100)}%)`, rx + 5, ry > 20 ? ry - 5 : ry + 15);
 
         tableBody.innerHTML += `<tr><td>${nameKor}</td><td>${Math.round(p.score * 100)}%</td></tr>`;
       });
@@ -474,7 +490,7 @@
       reader.readAsDataURL(e.target.files[0]);
     };
 
-    // Mode B: 원본 좌표 축적 1:1 매핑 완전 해결 구문
+    // Mode B: 수학적 오프셋 보정 완료
     const img2B = document.getElementById('image2B');
     const canvas2B = document.getElementById('canvas2B');
     const ctx2B = canvas2B.getContext('2d');
@@ -499,15 +515,13 @@
     async function detect2B() {
       if (!cocoModel) return;
 
-      // 이미지 오프셋 및 화면 렌더링 크기 계산
       const wrapper = img2B.parentElement;
-      
-      // 검은 여백 없이 캔버스를 이미지 표시 영역과 1:1 대응
-      canvas2B.width = img2B.clientWidth;
-      canvas2B.height = img2B.clientHeight;
+
+      canvas2B.width = wrapper.clientWidth;
+      canvas2B.height = wrapper.clientHeight;
       canvas2B.style.position = 'absolute';
-      canvas2B.style.left = img2B.offsetLeft + 'px';
-      canvas2B.style.top = img2B.offsetTop + 'px';
+      canvas2B.style.left = '0px';
+      canvas2B.style.top = '0px';
 
       ctx2B.clearRect(0, 0, canvas2B.width, canvas2B.height);
 
@@ -515,25 +529,30 @@
       const tableBody = document.getElementById('table2B');
       tableBody.innerHTML = '';
 
-      // 원본 해상도 대비 스크린 표시 비율
-      const scaleX = img2B.clientWidth / img2B.naturalWidth;
-      const scaleY = img2B.clientHeight / img2B.naturalHeight;
+      const scaleX = wrapper.clientWidth / img2B.naturalWidth;
+      const scaleY = wrapper.clientHeight / img2B.naturalHeight;
+      const scale = Math.min(scaleX, scaleY);
+
+      const renderWidth = img2B.naturalWidth * scale;
+      const renderHeight = img2B.naturalHeight * scale;
+
+      const offsetX = (wrapper.clientWidth - renderWidth) / 2;
+      const offsetY = (wrapper.clientHeight - renderHeight) / 2;
 
       predictions.forEach(p => {
         const [x, y, w, h] = p.bbox;
-        const rx = x * scaleX;
-        const ry = y * scaleY;
-        const rw = w * scaleX;
-        const rh = h * scaleY;
+
+        const rx = x * scale + offsetX;
+        const ry = y * scale + offsetY;
+        const rw = w * scale;
+        const rh = h * scale;
 
         const nameKor = labelKor[p.class] || p.class;
 
-        // 초록색 박스
         ctx2B.strokeStyle = '#00e676';
         ctx2B.lineWidth = 3;
         ctx2B.strokeRect(rx, ry, rw, rh);
 
-        // 한글 라벨
         ctx2B.fillStyle = '#00e676';
         ctx2B.font = 'bold 13px sans-serif';
         const label = `${nameKor} (${Math.round(p.score * 100)}%)`;
@@ -550,6 +569,7 @@
         tableBody.innerHTML = '<tr><td colspan="2">탐지된 객체가 없습니다.</td></tr>';
       }
     }
+
     // Section 3
     let cameraG1;
     const handsG1 = new Hands({ locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
@@ -592,8 +612,8 @@
       const canvas = document.getElementById('canvasG1');
       cameraG1 = new Camera(video, {
         onFrame: async () => { 
-          canvas.width = video.videoWidth || 640;
-          canvas.height = video.videoHeight || 480;
+          canvas.width = video.clientWidth;
+          canvas.height = video.clientHeight;
           await handsG1.send({ image: video }); 
         },
         width: 640, height: 480
@@ -629,19 +649,26 @@
 
     async function gameLoopG2() {
       if (!isPlayingG2) return;
-      canvasG2.width = videoG2.videoWidth || 640;
-      canvasG2.height = videoG2.videoHeight || 480;
+      canvasG2.width = videoG2.clientWidth;
+      canvasG2.height = videoG2.clientHeight;
 
       const predictions = await cocoModel.detect(videoG2);
       ctxG2.clearRect(0, 0, canvasG2.width, canvasG2.height);
 
+      const scaleX = videoG2.clientWidth / videoG2.videoWidth;
+      const scaleY = videoG2.clientHeight / videoG2.videoHeight;
+
       predictions.forEach(p => {
         const isMatch = p.class === currentTargetG2;
         const [x, y, w, h] = p.bbox;
+        const rx = x * scaleX;
+        const ry = y * scaleY;
+        const rw = w * scaleX;
+        const rh = h * scaleY;
 
         ctxG2.strokeStyle = isMatch ? '#00e676' : '#ff1744';
-        ctxG2.lineWidth = 4;
-        ctxG2.strokeRect(x, y, w, h);
+        ctxG2.lineWidth = 3;
+        ctxG2.strokeRect(rx, ry, rw, rh);
 
         if (isMatch && p.score > 0.65) {
           scoreG2 += 10;
