@@ -486,10 +486,11 @@
     async function detect2B() {
       if (!cocoModel) return;
 
-      // 이미지 요소의 화면상 실제 오프셋과 크기를 가져와 캔버스 오버레이 맞춤
-      const rect = img2B.getBoundingClientRect();
-      const parentRect = img2B.parentElement.getBoundingClientRect();
+      // 1. 이미지가 화면에 실제로 배치된 크기와 위치를 정확히 계산합니다.
+      const imgRect = img2B.getBoundingClientRect();
+      const wrapperRect = img2B.parentElement.getBoundingClientRect();
 
+      // 2. 캔버스의 크기 및 위치를 검은 상자가 아닌 '실제 이미지 영역'에 완벽히 밀착시킵니다.
       canvas2B.width = img2B.clientWidth;
       canvas2B.height = img2B.clientHeight;
       canvas2B.style.left = (img2B.offsetLeft) + 'px';
@@ -497,11 +498,12 @@
 
       ctx2B.clearRect(0, 0, canvas2B.width, canvas2B.height);
 
+      // 3. AI 탐지 실행
       const predictions = await cocoModel.detect(img2B);
       const tableBody = document.getElementById('table2B');
       tableBody.innerHTML = '';
 
-      // 원본 이미지 해상도 대비 화면 크기 비율 정밀 계산
+      // 4. 원본 이미지 대비 화면 표시 비율 계산
       const scaleX = img2B.clientWidth / img2B.naturalWidth;
       const scaleY = img2B.clientHeight / img2B.naturalHeight;
 
@@ -512,14 +514,20 @@
         const rw = w * scaleX;
         const rh = h * scaleY;
 
+        // 초록색 바운딩 박스 그리기
         ctx2B.strokeStyle = '#00e676';
         ctx2B.lineWidth = 3;
         ctx2B.strokeRect(rx, ry, rw, rh);
 
+        // 라벨 배경 및 텍스트
         ctx2B.fillStyle = '#00e676';
         ctx2B.font = 'bold 13px Arial';
         const label = `${p.class} (${Math.round(p.score * 100)}%)`;
-        ctx2B.fillText(label, rx + 5, ry > 20 ? ry - 5 : ry + 15);
+        const textWidth = ctx2B.measureText(label).width;
+        
+        ctx2B.fillRect(rx, ry > 20 ? ry - 20 : ry, textWidth + 8, 20);
+        ctx2B.fillStyle = '#000000';
+        ctx2B.fillText(label, rx + 4, ry > 20 ? ry - 5 : ry + 15);
 
         tableBody.innerHTML += `<tr><td><b>${p.class}</b></td><td>${Math.round(p.score * 100)}%</td></tr>`;
       });
