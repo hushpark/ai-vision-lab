@@ -483,12 +483,12 @@
     async function detect2B() {
       if (!cocoModel) return;
 
-      // 캔버스를 이미지 표시 영역 위치에 직접 밀착
-      canvas2B.width = img2B.clientWidth;
-      canvas2B.height = img2B.clientHeight;
+      const wrapper = img2B.parentElement;
+      canvas2B.width = wrapper.clientWidth;
+      canvas2B.height = wrapper.clientHeight;
       canvas2B.style.position = 'absolute';
-      canvas2B.style.left = img2B.offsetLeft + 'px';
-      canvas2B.style.top = img2B.offsetTop + 'px';
+      canvas2B.style.left = '0px';
+      canvas2B.style.top = '0px';
 
       ctx2B.clearRect(0, 0, canvas2B.width, canvas2B.height);
 
@@ -496,13 +496,33 @@
       const tableBody = document.getElementById('table2B');
       tableBody.innerHTML = '';
 
-      const scaleX = img2B.clientWidth / img2B.naturalWidth;
-      const scaleY = img2B.clientHeight / img2B.naturalHeight;
+      // 검은 여백(Letterbox) 및 실제 이미지 표시 비율 계산
+      const imgAspect = img2B.naturalWidth / img2B.naturalHeight;
+      const wrapperAspect = wrapper.clientWidth / wrapper.clientHeight;
+
+      let renderW, renderH, offsetX, offsetY;
+
+      if (wrapperAspect > imgAspect) {
+        renderH = wrapper.clientHeight;
+        renderW = renderH * imgAspect;
+        offsetX = (wrapper.clientWidth - renderW) / 2;
+        offsetY = 0;
+      } else {
+        renderW = wrapper.clientWidth;
+        renderH = renderW / imgAspect;
+        offsetX = 0;
+        offsetY = (wrapper.clientHeight - renderH) / 2;
+      }
+
+      const scaleX = renderW / img2B.naturalWidth;
+      const scaleY = renderH / img2B.naturalHeight;
 
       predictions.forEach(p => {
         const [x, y, w, h] = p.bbox;
-        const rx = x * scaleX;
-        const ry = y * scaleY;
+
+        // 여백(offsetX, offsetY)을 더해 정확한 스크린 위치로 좌표 보정
+        const rx = x * scaleX + offsetX;
+        const ry = y * scaleY + offsetY;
         const rw = w * scaleX;
         const rh = h * scaleY;
 
