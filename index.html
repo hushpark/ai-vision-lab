@@ -32,24 +32,23 @@
     .card { background: white; border-radius: 8px; border: 1px solid #e0e0e0; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .card-title { font-size: 18px; font-weight: bold; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 15px; color: #0056b3; }
 
-    /* 핵심 보정: 캔버스와 이미지를 1:1로 감싸서 여백 오차 0%화 */
+    /* 미디어 영역 - 캔버스 100% 오토 스케일링 */
     .media-wrapper { 
       position: relative; 
       width: 100%; 
+      height: 420px; 
       background: #1e1e1e; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
       border-radius: 6px; 
       overflow: hidden; 
-      text-align: center;
     }
-    .media-wrapper img, .media-wrapper video { 
+    .media-wrapper canvas, .media-wrapper video, .media-wrapper img { 
       max-width: 100%; 
       max-height: 420px; 
-      display: inline-block; 
-      vertical-align: middle;
-    }
-    canvas { 
-      position: absolute; 
-      pointer-events: none; 
+      object-fit: contain; 
+      display: block; 
     }
 
     .controls { margin-top: 15px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
@@ -99,7 +98,7 @@
           <div class="media-wrapper">
             <video id="webcam1" autoplay playsinline style="display:none;"></video>
             <img id="image1" src="https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=800" crossorigin="anonymous">
-            <canvas id="canvas1"></canvas>
+            <canvas id="canvas1" style="position:absolute; pointer-events:none;"></canvas>
           </div>
           <div class="controls">
             <button class="btn" onclick="startHandTracking()">카메라 시작</button>
@@ -134,7 +133,7 @@
           <div class="media-wrapper">
             <video id="webcam2A" autoplay playsinline style="display:none;"></video>
             <img id="image2A" src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800" crossorigin="anonymous">
-            <canvas id="canvas2A"></canvas>
+            <canvas id="canvas2A" style="position:absolute; pointer-events:none;"></canvas>
           </div>
           <div class="controls">
             <button class="btn" onclick="startWebcam2A()">웹캠 켜기</button>
@@ -157,12 +156,11 @@
         </div>
       </div>
 
-      <!-- Mode B -->
+      <!-- Mode B: 2번 통합 캔버스 렌더링 방식 -->
       <div id="modeB" class="mode-panel grid-2">
         <div class="card">
           <div class="card-title">🖼️ 샘플 이미지 분석</div>
           <div class="media-wrapper">
-            <img id="image2B" src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800" crossorigin="anonymous">
             <canvas id="canvas2B"></canvas>
           </div>
           <div class="controls">
@@ -212,7 +210,7 @@
           <div class="card-title">✊✌️🖐️ AI vs 나: 가위바위보</div>
           <div class="media-wrapper">
             <video id="webcamG1" autoplay playsinline></video>
-            <canvas id="canvasG1"></canvas>
+            <canvas id="canvasG1" style="position:absolute; pointer-events:none;"></canvas>
           </div>
           <div class="controls">
             <button class="btn" onclick="startGame1()">게임 시작 (카메라)</button>
@@ -234,7 +232,7 @@
           <div class="card-title">🔍 AI 보물찾기 (Scavenger Hunt)</div>
           <div class="media-wrapper">
             <video id="webcamG2" autoplay playsinline></video>
-            <canvas id="canvasG2"></canvas>
+            <canvas id="canvasG2" style="position:absolute; pointer-events:none;"></canvas>
           </div>
           <div class="controls">
             <button class="btn" onclick="nextMissionGame2()">게임 시작 / 다음 미션</button>
@@ -396,6 +394,7 @@
       document.getElementById('status2A').innerText = "✅ AI 준비 완료";
       document.getElementById('status2A').style.color = "green";
       detectFrame2A();
+      loadSample2B("https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800");
     });
 
     const img2A = document.getElementById('image2A');
@@ -413,7 +412,6 @@
       if (!cocoModel) return;
       const target = isWebcam2A ? video2A : img2A;
       
-      // 캔버스를 실제 이미지 위치와 렌더링 크기에 직접 밀착
       canvas2A.width = target.clientWidth;
       canvas2A.height = target.clientHeight;
       canvas2A.style.left = target.offsetLeft + 'px';
@@ -483,71 +481,72 @@
       reader.readAsDataURL(e.target.files[0]);
     };
 
-    // Mode B: 이미지 offsetLeft를 캔버스 style.left에 보정하여 밀착
-    const img2B = document.getElementById('image2B');
+    // --- Mode B: 캔버스 통합 렌더링 방식 (오차 0%) ---
     const canvas2B = document.getElementById('canvas2B');
     const ctx2B = canvas2B.getContext('2d');
+    let currentImg2B = new Image();
+    currentImg2B.crossOrigin = "anonymous";
 
-    function resetCanvas2B() {
-      ctx2B.clearRect(0, 0, canvas2B.width, canvas2B.height);
-      document.getElementById('table2B').innerHTML = '<tr><td colspan="2">분석 버튼을 누르세요.</td></tr>';
+    function loadSample2B(url) {
+      currentImg2B.src = url;
+      currentImg2B.onload = () => {
+        // 캔버스 자체 해상도를 이미지 원본 해상도와 1:1로 일치
+        canvas2B.width = currentImg2B.naturalWidth;
+        canvas2B.height = currentImg2B.naturalHeight;
+        // 이미지를 캔버스 배경으로 그리기
+        ctx2B.drawImage(currentImg2B, 0, 0);
+        document.getElementById('table2B').innerHTML = '<tr><td colspan="2">분석 버튼을 누르세요.</td></tr>';
+      };
     }
 
     function selectSample2B(el) {
       document.querySelectorAll('.sample-img').forEach(i => i.classList.remove('selected'));
       el.classList.add('selected');
-      img2B.src = el.src;
-      resetCanvas2B();
+      loadSample2B(el.src);
     }
 
     document.getElementById('upload2B').onchange = (e) => {
       const reader = new FileReader();
       reader.onload = (evt) => {
-        img2B.src = evt.target.result;
-        resetCanvas2B();
+        loadSample2B(evt.target.result);
       };
       reader.readAsDataURL(e.target.files[0]);
     };
 
     async function detect2B() {
-      if (!cocoModel) return;
+      if (!cocoModel || !currentImg2B.complete) return;
 
-      // 이미지의 실제 화면 렌더링 크기 및 시작 위치로 캔버스 위치 강제 밀착
-      canvas2B.width = img2B.clientWidth;
-      canvas2B.height = img2B.clientHeight;
-      canvas2B.style.left = img2B.offsetLeft + 'px';
-      canvas2B.style.top = img2B.offsetTop + 'px';
+      // 1. 캔버스 배경에 원본 이미지 그리기
+      ctx2B.drawImage(currentImg2B, 0, 0, canvas2B.width, canvas2B.height);
 
-      ctx2B.clearRect(0, 0, canvas2B.width, canvas2B.height);
-
-      const predictions = await cocoModel.detect(img2B);
+      // 2. AI 사물 탐지 수행
+      const predictions = await cocoModel.detect(currentImg2B);
       const tableBody = document.getElementById('table2B');
       tableBody.innerHTML = '';
 
-      const scaleX = img2B.clientWidth / (img2B.naturalWidth || img2B.clientWidth);
-      const scaleY = img2B.clientHeight / (img2B.naturalHeight || img2B.clientHeight);
+      // 원본 해상도 비율 기준 글자 크기 및 선 두께 보정
+      const fontSize = Math.max(16, Math.round(canvas2B.width / 35));
+      const lineWidth = Math.max(3, Math.round(canvas2B.width / 200));
 
       predictions.forEach(p => {
         const [x, y, w, h] = p.bbox;
-        const rx = x * scaleX;
-        const ry = y * scaleY;
-        const rw = w * scaleX;
-        const rh = h * scaleY;
-
         const nameKor = labelKor[p.class] || p.class;
 
+        // 초록색 테두리 상자
         ctx2B.strokeStyle = '#00e676';
-        ctx2B.lineWidth = 3;
-        ctx2B.strokeRect(rx, ry, rw, rh);
+        ctx2B.lineWidth = lineWidth;
+        ctx2B.strokeRect(x, y, w, h);
+
+        // 한글 라벨 텍스트 박스
+        const label = `${nameKor} (${Math.round(p.score * 100)}%)`;
+        ctx2B.font = `bold ${fontSize}px sans-serif`;
+        const textWidth = ctx2B.measureText(label).width;
+        const boxHeight = fontSize + 10;
 
         ctx2B.fillStyle = '#00e676';
-        ctx2B.font = 'bold 13px sans-serif';
-        const label = `${nameKor} (${Math.round(p.score * 100)}%)`;
-        const textWidth = ctx2B.measureText(label).width;
-
-        ctx2B.fillRect(rx, ry > 20 ? ry - 20 : ry, textWidth + 8, 20);
+        ctx2B.fillRect(x, y > boxHeight ? y - boxHeight : y, textWidth + 12, boxHeight);
         ctx2B.fillStyle = '#000000';
-        ctx2B.fillText(label, rx + 4, ry > 20 ? ry - 5 : ry + 15);
+        ctx2B.fillText(label, x + 6, y > boxHeight ? y - 8 : y + fontSize);
 
         tableBody.innerHTML += `<tr><td><b>${nameKor}</b></td><td>${Math.round(p.score * 100)}%</td></tr>`;
       });
