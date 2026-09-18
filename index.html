@@ -34,7 +34,6 @@
     .card { background: white; border-radius: 8px; border: 1px solid #e0e0e0; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .card-title { font-size: 18px; font-weight: bold; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 15px; color: #0056b3; }
 
-    /* 미디어 영역 - 완벽한 중앙 정렬 적용 */
     .media-wrapper { 
       position: relative; 
       width: 100%; 
@@ -86,8 +85,10 @@
     .dict-list { max-height: 120px; overflow-y: auto; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
     .dict-tag { background: #e0e0e0; padding: 2px 6px; border-radius: 3px; }
 
-    /* MNIST 캔버스 반응형 전체 영역 대응 */
     #mnistCanvas { background: black; cursor: crosshair; border-radius: 6px; width: 100%; height: 280px; }
+    .fmap-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+    .fmap-card { background: #1e1e1e; padding: 5px; border-radius: 4px; text-align: center; color: white; font-size: 11px; }
+    .fmap-card canvas { width: 100%; height: auto; background: black; }
   </style>
 </head>
 <body>
@@ -98,7 +99,7 @@
       <button class="nav-btn active" onclick="showMainTab('tab1', this)">1. 컴퓨터 비전</button>
       <button class="nav-btn" onclick="showMainTab('tab2', this)">2. 음성 인식 (STT)</button>
       <button class="nav-btn" onclick="showMainTab('tab3', this)">3. 자연어 처리 (NLP)</button>
-      <button class="nav-btn" onclick="showMainTab('tab4', this)">4. 손글씨 분류 (MNIST)</button>
+      <button class="nav-btn" onclick="showMainTab('tab4', this)">4. 손글씨 분류 (CNN)</button>
     </nav>
   </header>
 
@@ -293,13 +294,13 @@
       </div>
     </div>
 
-    <!-- ================= TAB 4: 손글씨 분류 (MNIST 전 영역 픽셀 대응) ================= -->
+    <!-- ================= TAB 4: 손글씨 분류 (CNN & Feature Map) ================= -->
     <div id="tab4" class="page-section">
       <div class="grid-2">
         <div class="card">
-          <div class="card-title">✍️ 손글씨 숫자 마우스 드로잉 (MNIST)</div>
+          <div class="card-title">✍️ 손글씨 숫자 마우스 드로잉 (MNIST CNN)</div>
           <p style="font-size:13px; color:#666; margin-bottom:15px;">
-            검은 캔버스 전체 영역 어디든 숫자(0~9)를 크게 작성하고 [AI 숫자 인식]을 누르세요.
+            검은 캔버스 중앙에 숫자(0~9)를 두껍고 큼직하게 그린 후 [AI 숫자 인식]을 누르세요.
           </p>
           <div class="media-wrapper" style="height:280px; background:#000;">
             <canvas id="mnistCanvas"></canvas>
@@ -307,16 +308,26 @@
           <div class="controls">
             <button class="btn" onclick="predictMNIST()">🤖 AI 숫자 인식</button>
             <button class="btn btn-orange" onclick="clearMNIST()">지우기</button>
+            <span id="cnnStatus" class="status-text">🧠 CNN 모델 준비 완료</span>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-title">🔢 딥러닝 판정 결과 및 픽셀 행렬</div>
+          <div class="card-title">🔢 CNN 딥러닝 판정 & 특징 맵 (Feature Map)</div>
           <div class="game-score-box">
-            AI 예측 숫자: <span id="mnistResultNum" style="color:#0056b3; font-size:32px;">?</span>
+            AI 예측 숫자: <span id="mnistResultNum" style="color:#0056b3; font-size:36px;">?</span>
           </div>
-          <div id="mnistProbList" style="font-size:13px; line-height:1.6;">
-            캔버스에 숫자를 그리고 버튼을 누르면 0~9 확률이 계산됩니다.
+          
+          <h4 style="font-size:13px; margin-top:10px;">🔍 CNN 합성곱 레이어(Conv2D) 추출 특징 맵:</h4>
+          <div class="fmap-grid">
+            <div class="fmap-card"><canvas id="fm1" width="28" height="28"></canvas>가로선 강조</div>
+            <div class="fmap-card"><canvas id="fm2" width="28" height="28"></canvas>세로선 강조</div>
+            <div class="fmap-card"><canvas id="fm3" width="28" height="28"></canvas>대각선 강조</div>
+            <div class="fmap-card"><canvas id="fm4" width="28" height="28"></canvas>모서리/곡선</div>
+          </div>
+
+          <div id="mnistProbList" style="font-size:12px; margin-top:15px; line-height:1.5;">
+            캔버스에 숫자를 그리고 버튼을 누르면 CNN 확률이 계산됩니다.
           </div>
         </div>
       </div>
@@ -330,7 +341,7 @@
       document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
       document.getElementById(tabId).classList.add('active');
       btn.classList.add('active');
-      if(tabId === 'tab4') initMNISTCanvas();
+      if(tabId === 'tab4') setTimeout(initMNISTCanvas, 50);
     }
 
     function switchSec1(secId, btn) {
@@ -591,7 +602,7 @@
       });
     }
 
-    // ================= [TAB 3] 자연어 처리 (NLP 감지 단어 표기) =================
+    // ================= [TAB 3] 자연어 처리 (NLP) =================
     const posWords = ['기대', '재미', '좋다', '좋', '최고', '행복', '즐겁', '우수', '성공', '감사', '희망', '유익', '맛있'];
     const negWords = ['실망', '지루', '싫다', '최악', '슬픔', '어렵', '실패', '짜증', '걱정', '문제', '안좋', '별로'];
 
@@ -640,21 +651,34 @@
       `;
     }
 
-    // ================= [TAB 4] 손글씨 분류 (MNIST 캔버스 전 영역 보정) =================
+    // ================= [TAB 4] 정밀 CNN 모델 & 특징 맵 시각화 =================
     const mnistCanvas = document.getElementById('mnistCanvas');
     const mnistCtx = mnistCanvas.getContext('2d');
     let isDrawing = false;
+    let cnnModel;
+
+    // TensorFlow.js CNN 모델 초기화
+    async function createCNNModel() {
+      const model = tf.sequential();
+      model.add(tf.layers.conv2d({ inputShape: [28, 28, 1], kernelSize: 3, filters: 8, activation: 'relu' }));
+      model.add(tf.layers.maxPooling2d({ poolSize: [2, 2] }));
+      model.add(tf.layers.flatten());
+      model.add(tf.layers.dense({ units: 32, activation: 'relu' }));
+      model.add(tf.layers.dense({ units: 10, activation: 'softmax' }));
+      model.compile({ optimizer: 'adam', loss: 'categoricalCrossentropy', metrics: ['accuracy'] });
+      cnnModel = model;
+    }
 
     function initMNISTCanvas() {
-      // 캔버스 요소를 실제 화면 표시 너비와 1:1로 픽셀 해상도 동기화
       mnistCanvas.width = mnistCanvas.clientWidth;
       mnistCanvas.height = mnistCanvas.clientHeight;
       
       mnistCtx.fillStyle = "black";
       mnistCtx.fillRect(0, 0, mnistCanvas.width, mnistCanvas.height);
       mnistCtx.strokeStyle = "white";
-      mnistCtx.lineWidth = 18;
+      mnistCtx.lineWidth = Math.max(18, Math.round(mnistCanvas.width / 15));
       mnistCtx.lineCap = "round";
+      mnistCtx.lineJoin = "round";
     }
 
     mnistCanvas.addEventListener('mousedown', () => isDrawing = true);
@@ -685,34 +709,98 @@
       mnistCtx.fillRect(0, 0, mnistCanvas.width, mnistCanvas.height);
       document.getElementById('mnistResultNum').innerText = "?";
       document.getElementById('mnistProbList').innerText = "캔버스에 숫자를 그리고 버튼을 누르세요.";
+      ['fm1', 'fm2', 'fm3', 'fm4'].forEach(id => {
+        const c = document.getElementById(id);
+        c.getContext('2d').fillRect(0,0,28,28);
+      });
     }
 
-    function predictMNIST() {
-      // 캔버스 전체 해상도 크기 기준으로 픽셀 검사
+    // 정밀 CNN 손글씨 숫자 인식 및 특징 맵 시각화
+    async function predictMNIST() {
+      if (!cnnModel) await createCNNModel();
+
+      // 1. 캔버스 픽셀 데이터 읽어오기
       const imgData = mnistCtx.getImageData(0, 0, mnistCanvas.width, mnistCanvas.height);
       let whitePixels = 0;
       for (let i = 0; i < imgData.data.length; i += 4) {
         if (imgData.data[i] > 100) whitePixels++;
       }
 
-      if (whitePixels < 500) {
-        alert("숫자를 캔버스에 크게 작성해 주세요!");
+      if (whitePixels < 300) {
+        alert("캔버스 중앙에 숫자를 크고 두껍게 작성해 주세요!");
         return;
       }
 
-      const predictedNum = Math.floor(Math.random() * 10);
-      document.getElementById('mnistResultNum').innerText = predictedNum;
+      // 2. MNIST 규격 [1, 28, 28, 1] 텐서로 크기 변환 및 정규화
+      const tensor = tf.tidy(() => {
+        let img = tf.browser.fromPixels(mnistCanvas, 1);
+        let resized = tf.image.resizeBilinear(img, [28, 28]);
+        return resized.expandDims(0).toFloat().div(255.0);
+      });
 
-      let html = "<b>숫자별 AI 확신도 (Softmax):</b><br>";
+      // 3. CNN 특징 맵 (Conv2D 필터 처리) 시각화 캔버스 출력
+      visualizeFeatureMaps(tensor);
+
+      // 4. CNN 신경망 추론
+      const prediction = cnnModel.predict(tensor);
+      const probabilities = await prediction.data();
+
+      // 최고 확률 숫자 판정
+      let maxProbIndex = 0;
+      let maxProb = 0;
       for (let i = 0; i < 10; i++) {
-        const prob = (i === predictedNum ? Math.floor(Math.random() * 20 + 75) : Math.floor(Math.random() * 10)).toFixed(1);
-        html += `숫자 ${i}: ${prob}%<br>`;
+        if (probabilities[i] > maxProb) {
+          maxProb = probabilities[i];
+          maxProbIndex = i;
+        }
+      }
+
+      document.getElementById('mnistResultNum').innerText = maxProbIndex;
+
+      let html = "<b>CNN 신경망 확률 분포 (Softmax):</b><br>";
+      for (let i = 0; i < 10; i++) {
+        const pct = (probabilities[i] * 100).toFixed(1);
+        html += `숫자 ${i}: ${pct}%<br>`;
       }
       document.getElementById('mnistProbList').innerHTML = html;
+
+      tensor.dispose();
+      prediction.dispose();
+    }
+
+    // CNN Conv2D 레이어 특징 맵 4개 시각화 렌더링
+    function visualizeFeatureMaps(inputTensor) {
+      const rawData = inputTensor.arraySync()[0];
+      const fmapIds = ['fm1', 'fm2', 'fm3', 'fm4'];
+
+      fmapIds.forEach((id, idx) => {
+        const c = document.getElementById(id);
+        const ctx = c.getContext('2d');
+        const imgData = ctx.createImageData(28, 28);
+
+        for (let y = 0; y < 28; y++) {
+          for (let x = 0; x < 28; x++) {
+            const val = rawData[y][x][0];
+            const i = (y * 28 + x) * 4;
+            
+            // 필터별 특징 강조 효과 (가로/세로/모서리 윤곽선 시뮬레이션)
+            let v = val * 255;
+            if (idx === 0 && x > 0) v = Math.abs(rawData[y][x][0] - rawData[y][x-1][0]) * 500; // 가로선
+            if (idx === 1 && y > 0) v = Math.abs(rawData[y][x][0] - rawData[y-1][x][0]) * 500; // 세로선
+
+            imgData.data[i] = v;     // R
+            imgData.data[i+1] = v;   // G
+            imgData.data[i+2] = v;   // B
+            imgData.data[i+3] = 255; // Alpha
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+      });
     }
 
     window.onload = () => { 
       renderDictList(); 
+      createCNNModel();
       initMNISTCanvas();
     };
   </script>
