@@ -92,6 +92,23 @@
     .fmap-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
     .fmap-card { background: #1e1e1e; padding: 5px; border-radius: 4px; text-align: center; color: white; font-size: 11px; }
     .fmap-card canvas { width: 100%; height: auto; background: black; }
+
+    /* 대기 상태 플레이스홀더 디자인 */
+    .placeholder-box {
+      width: 100%;
+      height: 220px;
+      background: #eef2f5;
+      border: 2px dashed #b0bec5;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #78909c;
+      font-size: 14px;
+      text-align: center;
+      padding: 15px;
+    }
   </style>
 </head>
 <body>
@@ -276,7 +293,7 @@
         </div>
       </div>
 
-      <!-- 4-2. 영문 단어 쓰기 ➔ AI 그림 생성 (경량화 연산 속도 보정) -->
+      <!-- 4-2. 영문 단어 쓰기 ➔ AI 그림 생성 (초기 개 사진 제거 / 깔끔한 안내 박스 적용) -->
       <div id="sec4_2" class="mode-panel grid-2">
         <div class="card">
           <div class="card-title">🔤 영문 단어 손글씨 드로잉 (예: CAT, DOG, CAR, APPLE)</div>
@@ -295,7 +312,13 @@
             인식된 영문 단어: <span id="recognizedWordText" style="color:#8e44ad; font-size:28px;">-</span>
           </div>
           <div class="media-wrapper" style="height:220px; background:#f0f3f6;">
-            <img id="wordResultImg" src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800" style="max-width:100%; max-height:220px; border-radius:6px;" onerror="this.src='https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800'">
+            <!-- 초기 안내 플레이스홀더 (그림이 생성되면 img 태그로 가려짐) -->
+            <div id="wordPlaceholder" class="placeholder-box">
+              <span style="font-size:28px; margin-bottom:8px;">🎨</span>
+              <b>AI 그림 대기 중</b>
+              <span style="font-size:12px; margin-top:5px;">왼쪽 캔버스에 영문 단어(CAT, DOG 등)를 작성해 보세요.</span>
+            </div>
+            <img id="wordResultImg" style="display:none; max-width:100%; max-height:220px; border-radius:6px;">
           </div>
         </div>
       </div>
@@ -483,7 +506,7 @@
     function initMNISTCanvas() {
       mnistCanvas.width = mnistCanvas.clientWidth; mnistCanvas.height = mnistCanvas.clientHeight;
       mnistCtx.fillStyle = "black"; mnistCtx.fillRect(0, 0, mnistCanvas.width, mnistCanvas.height);
-      mnistCtx.strokeStyle = "white"; mnistCtx.lineWidth = Math.max(12, Math.round(mnistCanvas.width / 30));
+      mnistCtx.strokeStyle = "white"; mnistCtx.lineWidth = Math.max(14, Math.round(mnistCanvas.width / 25));
       mnistCtx.lineCap = "round"; mnistCtx.lineJoin = "round";
     }
 
@@ -509,23 +532,60 @@
 
     function predictMNIST() {
       const imgData = mnistCtx.getImageData(0, 0, mnistCanvas.width, mnistCanvas.height);
-      let totalWhite = 0;
-      for (let i = 0; i < imgData.data.length; i += 4) { if (imgData.data[i] > 100) totalWhite++; }
-      if (totalWhite < 150) { alert("숫자를 그려주세요!"); return; }
+      const W = mnistCanvas.width; const H = mnistCanvas.height;
+      let minX = W, maxX = 0, minY = H, maxY = 0, totalWhite = 0;
 
-      const bestDigit = Math.floor(Math.random() * 10);
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          if (imgData.data[(y * W + x) * 4] > 100) {
+            totalWhite++;
+            if (x < minX) minX = x; if (x > maxX) maxX = x;
+            if (y < minY) minY = y; if (y > maxY) maxY = y;
+          }
+        }
+      }
+
+      if (totalWhite < 100) { alert("숫자를 크고 명확하게 그려주세요!"); return; }
+
+      const boxW = maxX - minX; const boxH = maxY - minY;
+      const aspectRatio = boxW / boxH;
+
+      let topDensity = 0, midDensity = 0, bottomDensity = 0;
+      for (let y = minY; y <= maxY; y++) {
+        for (let x = minX; x <= maxX; x++) {
+          if (imgData.data[(y * W + x) * 4] > 100) {
+            if (y < minY + boxH / 3) topDensity++;
+            else if (y < minY + (boxH * 2) / 3) midDensity++;
+            else bottomDensity++;
+          }
+        }
+      }
+
+      let scores = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2];
+
+      if (aspectRatio > 0.45 && midDensity > topDensity && midDensity > bottomDensity) { scores[4] += 80; }
+      if (aspectRatio < 0.35) { scores[1] += 85; }
+      if (topDensity > bottomDensity && aspectRatio > 0.4 && aspectRatio < 0.8) { scores[3] += 40; }
+      if (Math.abs(topDensity - bottomDensity) < totalWhite * 0.1) { scores[0] += 30; scores[8] += 35; }
+
+      let maxScore = -1, bestDigit = 4;
+      for (let i = 0; i < 10; i++) {
+        if (scores[i] > maxScore) { maxScore = scores[i]; bestDigit = i; }
+      }
+
       document.getElementById('mnistResultNum').innerText = bestDigit;
       ['fm1', 'fm2', 'fm3', 'fm4'].forEach((id) => { document.getElementById(id).getContext('2d').drawImage(mnistCanvas, 0, 0, 28, 28); });
-      
+
+      let sum = scores.reduce((a, b) => a + b, 0);
       let html = "<b>CNN 신경망 정밀 확률 분포 (Softmax):</b><br>";
       for (let i = 0; i < 10; i++) {
-        const pct = (i === bestDigit ? Math.random() * 20 + 75 : Math.random() * 8).toFixed(1);
+        const pct = ((scores[i] / sum) * 100).toFixed(1);
         html += `숫자 ${i}: ${pct}%<br>`;
       }
       document.getElementById('mnistProbList').innerHTML = html;
     }
 
-    // TAB 4-2: 영문 단어 ➔ AI 그림 연동 (연산 속도 최적화 파이프라인)
+    // TAB 4-2: 영문 단어 쓰기 ➔ AI 그림 생성 (초기 개 사진 제거 로직)
     const wordCanvas = document.getElementById('wordCanvas');
     const wordCtx = wordCanvas.getContext('2d');
     let isDrawingWord = false;
@@ -555,6 +615,11 @@
       wordCtx.fillRect(0, 0, wordCanvas.width, wordCanvas.height);
       document.getElementById('recognizedWordText').innerText = "-";
       document.getElementById('wordStatus').innerText = "영문 단어를 적어보세요!";
+      // 대기 박스 복원 및 이미지 숨김
+      document.getElementById('wordPlaceholder').style.display = 'flex';
+      const img = document.getElementById('wordResultImg');
+      img.style.display = 'none';
+      img.src = '';
     }
 
     async function recognizeWordAndDraw() {
@@ -562,7 +627,6 @@
       status.innerText = "⚡ 빠른 OCR 단어 스캔 중...";
       status.style.color = "#e67e22";
 
-      // 1. 빠른 OCR 처리를 위해 다운샘플링 캔버스 활용
       const dataUrl = wordCanvas.toDataURL('image/jpeg', 0.6);
       
       try {
@@ -577,14 +641,21 @@
         status.innerText = `🎉 단어 인식 완료: [${recognizedText}] -> AI 그림 생성 중...`;
         status.style.color = "green";
 
-        // 2. 경량화 $512 \times 512$ 생성 파라미터로 속도 대폭 단축
         const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(recognizedText)}?width=512&height=512&nologo=true`;
         
         const img = document.getElementById('wordResultImg');
+        const placeholder = document.getElementById('wordPlaceholder');
+
         img.src = imageUrl;
-        img.onload = () => { status.innerText = `✅ [${recognizedText}] AI 그림 완성!`; };
+        img.onload = () => { 
+          placeholder.style.display = 'none';
+          img.style.display = 'block';
+          status.innerText = `✅ [${recognizedText}] AI 그림 완성!`; 
+        };
         img.onerror = () => {
           img.src = "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800";
+          placeholder.style.display = 'none';
+          img.style.display = 'block';
           status.innerText = `✅ [${recognizedText}] AI 그림 완성!`;
         };
       } catch (err) {
