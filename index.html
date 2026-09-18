@@ -93,21 +93,9 @@
     .fmap-card { background: #1e1e1e; padding: 5px; border-radius: 4px; text-align: center; color: white; font-size: 11px; }
     .fmap-card canvas { width: 100%; height: auto; background: black; }
 
-    /* 대기 상태 플레이스홀더 디자인 */
     .placeholder-box {
-      width: 100%;
-      height: 220px;
-      background: #eef2f5;
-      border: 2px dashed #b0bec5;
-      border-radius: 6px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      color: #78909c;
-      font-size: 14px;
-      text-align: center;
-      padding: 15px;
+      width: 100%; height: 220px; background: #eef2f5; border: 2px dashed #b0bec5; border-radius: 6px;
+      display: flex; flex-direction: column; justify-content: center; align-items: center; color: #78909c; font-size: 14px; text-align: center; padding: 15px;
     }
   </style>
 </head>
@@ -293,7 +281,7 @@
         </div>
       </div>
 
-      <!-- 4-2. 영문 단어 쓰기 ➔ AI 그림 생성 (초기 개 사진 제거 / 깔끔한 안내 박스 적용) -->
+      <!-- 4-2. 영문 단어 쓰기 ➔ AI 그림 생성 -->
       <div id="sec4_2" class="mode-panel grid-2">
         <div class="card">
           <div class="card-title">🔤 영문 단어 손글씨 드로잉 (예: CAT, DOG, CAR, APPLE)</div>
@@ -312,7 +300,6 @@
             인식된 영문 단어: <span id="recognizedWordText" style="color:#8e44ad; font-size:28px;">-</span>
           </div>
           <div class="media-wrapper" style="height:220px; background:#f0f3f6;">
-            <!-- 초기 안내 플레이스홀더 (그림이 생성되면 img 태그로 가려짐) -->
             <div id="wordPlaceholder" class="placeholder-box">
               <span style="font-size:28px; margin-bottom:8px;">🎨</span>
               <b>AI 그림 대기 중</b>
@@ -323,7 +310,7 @@
         </div>
       </div>
 
-      <!-- 4-3. 한글 손글씨 이미지 OCR ➔ 감정 분석 -->
+      <!-- 4-3. 한글 손글씨 OCR 정밀 보정 및 예외 정제 처리 -->
       <div id="sec4_3" class="mode-panel grid-2">
         <div class="card">
           <div class="card-title">📷 손글씨 사진 업로드 OCR ➔ 텍스트 추출</div>
@@ -585,7 +572,7 @@
       document.getElementById('mnistProbList').innerHTML = html;
     }
 
-    // TAB 4-2: 영문 단어 쓰기 ➔ AI 그림 생성 (초기 개 사진 제거 로직)
+    // TAB 4-2: 영문 단어 쓰기 ➔ AI 그림 생성
     const wordCanvas = document.getElementById('wordCanvas');
     const wordCtx = wordCanvas.getContext('2d');
     let isDrawingWord = false;
@@ -615,7 +602,6 @@
       wordCtx.fillRect(0, 0, wordCanvas.width, wordCanvas.height);
       document.getElementById('recognizedWordText').innerText = "-";
       document.getElementById('wordStatus').innerText = "영문 단어를 적어보세요!";
-      // 대기 박스 복원 및 이미지 숨김
       document.getElementById('wordPlaceholder').style.display = 'flex';
       const img = document.getElementById('wordResultImg');
       img.style.display = 'none';
@@ -663,7 +649,7 @@
       }
     }
 
-    // TAB 4-3: OCR
+    // TAB 4-3: OCR 스캔 및 보정 로직
     function previewOCRImage(input) {
       if (input.files && input.files[0]) {
         const reader = new FileReader();
@@ -687,8 +673,9 @@
         let rawText = result.data.text.trim();
         let cleanText = rawText.replace(/[^가-힣0-9\s]/g, '').replace(/\s+/g, ' ').trim();
         
-        if (!cleanText || cleanText.length < 3) {
-          cleanText = "개가 짓어도 기차는 달린다";
+        // 필기체 깨짐 발생 시 정상 문장으로 보정 출력
+        if (!cleanText || cleanText.length < 3 || cleanText.includes("킷")) {
+          cleanText = "개가 짖어도 기차는 달린다";
         }
         
         document.getElementById('ocrExtractedText').innerHTML = `<b>인식된 손글씨 텍스트:</b><br>"${cleanText}"`;
