@@ -86,7 +86,8 @@
     .dict-list { max-height: 120px; overflow-y: auto; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
     .dict-tag { background: #e0e0e0; padding: 2px 6px; border-radius: 3px; }
 
-    #mnistCanvas { background: black; cursor: crosshair; border-radius: 6px; }
+    /* MNIST 캔버스 반응형 전체 영역 대응 */
+    #mnistCanvas { background: black; cursor: crosshair; border-radius: 6px; width: 100%; height: 280px; }
   </style>
 </head>
 <body>
@@ -292,16 +293,16 @@
       </div>
     </div>
 
-    <!-- ================= TAB 4: 손글씨 분류 (MNIST) ================= -->
+    <!-- ================= TAB 4: 손글씨 분류 (MNIST 전 영역 픽셀 대응) ================= -->
     <div id="tab4" class="page-section">
       <div class="grid-2">
         <div class="card">
           <div class="card-title">✍️ 손글씨 숫자 마우스 드로잉 (MNIST)</div>
           <p style="font-size:13px; color:#666; margin-bottom:15px;">
-            검은 캔버스에 마우스나 손가락으로 숫자(0~9)를 크게 작성하고 [AI 숫자 인식]을 누르세요.
+            검은 캔버스 전체 영역 어디든 숫자(0~9)를 크게 작성하고 [AI 숫자 인식]을 누르세요.
           </p>
           <div class="media-wrapper" style="height:280px; background:#000;">
-            <canvas id="mnistCanvas" width="280" height="280"></canvas>
+            <canvas id="mnistCanvas"></canvas>
           </div>
           <div class="controls">
             <button class="btn" onclick="predictMNIST()">🤖 AI 숫자 인식</button>
@@ -329,6 +330,7 @@
       document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
       document.getElementById(tabId).classList.add('active');
       btn.classList.add('active');
+      if(tabId === 'tab4') initMNISTCanvas();
     }
 
     function switchSec1(secId, btn) {
@@ -589,7 +591,7 @@
       });
     }
 
-    // ================= [TAB 3] 자연어 처리 (NLP 감지 단어 표기 포함) =================
+    // ================= [TAB 3] 자연어 처리 (NLP 감지 단어 표기) =================
     const posWords = ['기대', '재미', '좋다', '좋', '최고', '행복', '즐겁', '우수', '성공', '감사', '희망', '유익', '맛있'];
     const negWords = ['실망', '지루', '싫다', '최악', '슬픔', '어렵', '실패', '짜증', '걱정', '문제', '안좋', '별로'];
 
@@ -638,16 +640,22 @@
       `;
     }
 
-    // ================= [TAB 4] 손글씨 분류 (MNIST Canvas & Model) =================
+    // ================= [TAB 4] 손글씨 분류 (MNIST 캔버스 전 영역 보정) =================
     const mnistCanvas = document.getElementById('mnistCanvas');
     const mnistCtx = mnistCanvas.getContext('2d');
     let isDrawing = false;
 
-    mnistCtx.fillStyle = "black";
-    mnistCtx.fillRect(0, 0, mnistCanvas.width, mnistCanvas.height);
-    mnistCtx.strokeStyle = "white";
-    mnistCtx.lineWidth = 16;
-    mnistCtx.lineCap = "round";
+    function initMNISTCanvas() {
+      // 캔버스 요소를 실제 화면 표시 너비와 1:1로 픽셀 해상도 동기화
+      mnistCanvas.width = mnistCanvas.clientWidth;
+      mnistCanvas.height = mnistCanvas.clientHeight;
+      
+      mnistCtx.fillStyle = "black";
+      mnistCtx.fillRect(0, 0, mnistCanvas.width, mnistCanvas.height);
+      mnistCtx.strokeStyle = "white";
+      mnistCtx.lineWidth = 18;
+      mnistCtx.lineCap = "round";
+    }
 
     mnistCanvas.addEventListener('mousedown', () => isDrawing = true);
     mnistCanvas.addEventListener('mouseup', () => { isDrawing = false; mnistCtx.beginPath(); });
@@ -680,7 +688,8 @@
     }
 
     function predictMNIST() {
-      const imgData = mnistCtx.getImageData(0, 0, 280, 280);
+      // 캔버스 전체 해상도 크기 기준으로 픽셀 검사
+      const imgData = mnistCtx.getImageData(0, 0, mnistCanvas.width, mnistCanvas.height);
       let whitePixels = 0;
       for (let i = 0; i < imgData.data.length; i += 4) {
         if (imgData.data[i] > 100) whitePixels++;
@@ -702,7 +711,10 @@
       document.getElementById('mnistProbList').innerHTML = html;
     }
 
-    window.onload = () => { renderDictList(); };
+    window.onload = () => { 
+      renderDictList(); 
+      initMNISTCanvas();
+    };
   </script>
 </body>
 </html>
