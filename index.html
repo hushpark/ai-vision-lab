@@ -32,7 +32,7 @@
     .card { background: white; border-radius: 8px; border: 1px solid #e0e0e0; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .card-title { font-size: 18px; font-weight: bold; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 15px; color: #0056b3; }
 
-    /* 미디어 영역 - Mode A & B 통일 레버리지 */
+    /* 검은 여백 프레임 */
     .media-wrapper { 
       position: relative; 
       width: 100%; 
@@ -44,14 +44,25 @@
       border-radius: 6px; 
       overflow: hidden; 
     }
-    .media-wrapper img, .media-wrapper video { 
+    
+    /* 핵심 보정: 이미지를 감싸는 컨테이너 구조로 캔버스 위치 100% 밀착 */
+    .img-relative-box {
+      position: relative;
+      display: inline-block;
+      max-width: 100%;
+      max-height: 420px;
+    }
+    .img-relative-box img, .img-relative-box video { 
       max-width: 100%; 
       max-height: 420px; 
-      object-fit: contain; 
       display: block; 
     }
-    canvas { 
+    .img-relative-box canvas { 
       position: absolute; 
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       pointer-events: none; 
     }
 
@@ -100,9 +111,11 @@
         <div class="card">
           <div class="card-title">🖐️ 실시간 손가락 랜드마크 추적</div>
           <div class="media-wrapper">
-            <video id="webcam1" autoplay playsinline style="display:none;"></video>
-            <img id="image1" src="https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=800" crossorigin="anonymous">
-            <canvas id="canvas1"></canvas>
+            <div class="img-relative-box">
+              <video id="webcam1" autoplay playsinline style="display:none;"></video>
+              <img id="image1" src="https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=800" crossorigin="anonymous">
+              <canvas id="canvas1"></canvas>
+            </div>
           </div>
           <div class="controls">
             <button class="btn" onclick="startHandTracking()">카메라 시작</button>
@@ -135,9 +148,11 @@
         <div class="card">
           <div class="card-title">🎥 실시간 사물 인식 (웹캠 / 파일)</div>
           <div class="media-wrapper">
-            <video id="webcam2A" autoplay playsinline style="display:none;"></video>
-            <img id="image2A" src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800" crossorigin="anonymous">
-            <canvas id="canvas2A"></canvas>
+            <div class="img-relative-box">
+              <video id="webcam2A" autoplay playsinline style="display:none;"></video>
+              <img id="image2A" src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800" crossorigin="anonymous">
+              <canvas id="canvas2A"></canvas>
+            </div>
           </div>
           <div class="controls">
             <button class="btn" onclick="startWebcam2A()">웹캠 켜기</button>
@@ -165,8 +180,10 @@
         <div class="card">
           <div class="card-title">🖼️ 샘플 이미지 분석</div>
           <div class="media-wrapper">
-            <img id="image2B" src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800" crossorigin="anonymous">
-            <canvas id="canvas2B"></canvas>
+            <div class="img-relative-box">
+              <img id="image2B" src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800" crossorigin="anonymous">
+              <canvas id="canvas2B"></canvas>
+            </div>
           </div>
           <div class="controls">
             <button class="btn" onclick="detect2B()">분석하기</button>
@@ -214,8 +231,10 @@
         <div class="card">
           <div class="card-title">✊✌️🖐️ AI vs 나: 가위바위보</div>
           <div class="media-wrapper">
-            <video id="webcamG1" autoplay playsinline></video>
-            <canvas id="canvasG1"></canvas>
+            <div class="img-relative-box">
+              <video id="webcamG1" autoplay playsinline></video>
+              <canvas id="canvasG1"></canvas>
+            </div>
           </div>
           <div class="controls">
             <button class="btn" onclick="startGame1()">게임 시작 (카메라)</button>
@@ -236,8 +255,10 @@
         <div class="card">
           <div class="card-title">🔍 AI 보물찾기 (Scavenger Hunt)</div>
           <div class="media-wrapper">
-            <video id="webcamG2" autoplay playsinline></video>
-            <canvas id="canvasG2"></canvas>
+            <div class="img-relative-box">
+              <video id="webcamG2" autoplay playsinline></video>
+              <canvas id="canvasG2"></canvas>
+            </div>
           </div>
           <div class="controls">
             <button class="btn" onclick="nextMissionGame2()">게임 시작 / 다음 미션</button>
@@ -479,7 +500,7 @@
       reader.readAsDataURL(e.target.files[0]);
     };
 
-    // Mode B: Mode A와 동일한 스케일링으로 좌표 오차 0%화
+    // Mode B: 이미지와 캔버스 1:1 결합 구조 적용
     const img2B = document.getElementById('image2B');
     const canvas2B = document.getElementById('canvas2B');
     const ctx2B = canvas2B.getContext('2d');
@@ -505,15 +526,12 @@
       reader.readAsDataURL(e.target.files[0]);
     };
 
-    /* Mode A와 동일한 좌표 스케일링 계산 로직 적용 */
     async function detect2B() {
       if (!cocoModel) return;
 
-      // 캔버스 위치와 크기를 렌더링된 이미지 크기와 1:1 대응
+      // 캔버스 크기를 이미지 요소의 실제 표시 크기와 정확히 똑같이 맞춤
       canvas2B.width = img2B.clientWidth;
       canvas2B.height = img2B.clientHeight;
-      canvas2B.style.left = img2B.offsetLeft + 'px';
-      canvas2B.style.top = img2B.offsetTop + 'px';
 
       ctx2B.clearRect(0, 0, canvas2B.width, canvas2B.height);
 
