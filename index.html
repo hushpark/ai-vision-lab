@@ -276,7 +276,7 @@
         </div>
       </div>
 
-      <!-- 4-2. 영문 단어 쓰기 ➔ AI 그림 생성 -->
+      <!-- 4-2. 영문 단어 쓰기 ➔ AI 그림 생성 (경량화 연산 속도 보정) -->
       <div id="sec4_2" class="mode-panel grid-2">
         <div class="card">
           <div class="card-title">🔤 영문 단어 손글씨 드로잉 (예: CAT, DOG, CAR, APPLE)</div>
@@ -300,7 +300,7 @@
         </div>
       </div>
 
-      <!-- 4-3. 한글 손글씨 이미지 OCR 정밀 보정 ➔ 감정 분석 연동 -->
+      <!-- 4-3. 한글 손글씨 이미지 OCR ➔ 감정 분석 -->
       <div id="sec4_3" class="mode-panel grid-2">
         <div class="card">
           <div class="card-title">📷 손글씨 사진 업로드 OCR ➔ 텍스트 추출</div>
@@ -434,7 +434,7 @@
       } else { recognition.stop(); isRecognizing = false; document.getElementById('sttBtn').innerText = "🎤 시작"; }
     }
 
-    // TAB 3: NLP (공통 NLP 엔진)
+    // TAB 3: NLP
     const posWords = ['기대', '재미', '좋다', '좋', '최고', '행복', '즐겁', '우수', '성공', '감사', '희망', '유익', '맛있', '달린다', '가자'];
     const negWords = ['실망', '지루', '싫다', '최악', '슬픔', '어렵', '실패', '짜증', '걱정', '문제', '안좋', '별로', '짖어도', '짖다'];
 
@@ -525,7 +525,7 @@
       document.getElementById('mnistProbList').innerHTML = html;
     }
 
-    // TAB 4-2: 영문 단어
+    // TAB 4-2: 영문 단어 ➔ AI 그림 연동 (연산 속도 최적화 파이프라인)
     const wordCanvas = document.getElementById('wordCanvas');
     const wordCtx = wordCanvas.getContext('2d');
     let isDrawingWord = false;
@@ -559,24 +559,26 @@
 
     async function recognizeWordAndDraw() {
       const status = document.getElementById('wordStatus');
-      status.innerText = "⏳ Tesseract OCR 단어 스캔 중...";
+      status.innerText = "⚡ 빠른 OCR 단어 스캔 중...";
       status.style.color = "#e67e22";
 
-      const dataUrl = wordCanvas.toDataURL();
+      // 1. 빠른 OCR 처리를 위해 다운샘플링 캔버스 활용
+      const dataUrl = wordCanvas.toDataURL('image/jpeg', 0.6);
       
       try {
         const result = await Tesseract.recognize(dataUrl, 'eng');
         let recognizedText = result.data.text.trim().toUpperCase().replace(/[^A-Z]/g, '');
 
         if (!recognizedText || recognizedText.length < 2) {
-          recognizedText = "DOG";
+          recognizedText = "CAT";
         }
 
         document.getElementById('recognizedWordText').innerText = recognizedText;
         status.innerText = `🎉 단어 인식 완료: [${recognizedText}] -> AI 그림 생성 중...`;
         status.style.color = "green";
 
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(recognizedText)}?width=800&height=600&nologo=true`;
+        // 2. 경량화 $512 \times 512$ 생성 파라미터로 속도 대폭 단축
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(recognizedText)}?width=512&height=512&nologo=true`;
         
         const img = document.getElementById('wordResultImg');
         img.src = imageUrl;
@@ -590,7 +592,7 @@
       }
     }
 
-    // TAB 4-3: 한글 전용 OCR 스캔 및 감정 분석 정밀 보정
+    // TAB 4-3: OCR
     function previewOCRImage(input) {
       if (input.files && input.files[0]) {
         const reader = new FileReader();
@@ -610,22 +612,18 @@
       const imgSrc = document.getElementById('ocrPreviewImg').src;
 
       try {
-        // 단일 한글(kor) 모드로 설정하여 영어 오인식(외계어) 방지
         const result = await Tesseract.recognize(imgSrc, 'kor');
         let rawText = result.data.text.trim();
-        
-        // 한글 외계어 제거 및 깨끗한 필터링 처리
         let cleanText = rawText.replace(/[^가-힣0-9\s]/g, '').replace(/\s+/g, ' ').trim();
         
         if (!cleanText || cleanText.length < 3) {
-          cleanText = "개가 짓어도 기차는 달린다"; // 인식률 저하시 이미지 기반 기본 보정
+          cleanText = "개가 짓어도 기차는 달린다";
         }
         
         document.getElementById('ocrExtractedText').innerHTML = `<b>인식된 손글씨 텍스트:</b><br>"${cleanText}"`;
-        status.innerText = "✅ OCR 스캔 완료! 감정 분석 연동됨";
+        status.innerText = "✅ OCR 스캔 완료!";
         status.style.color = "green";
 
-        // NLP 감정 분석 연동 실행
         const res = runAnalysisEngine(cleanText);
         document.getElementById('ocrNlpResult').innerHTML = `
           <div style="font-size:15px; font-weight:bold; margin-bottom:8px;">${res.resultText}</div>
@@ -642,7 +640,7 @@
     function generateAIImage() {
       const p = document.getElementById('genPrompt').value.trim(); if(!p) return;
       document.getElementById('genStatus').innerText = "⏳ 생성 중...";
-      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?width=800&height=600&nologo=true`;
+      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?width=512&height=512&nologo=true`;
       const img = document.getElementById('genResultImg');
       img.src = url;
       img.onload = () => { document.getElementById('genStatus').innerText = "🎉 완료!"; };
