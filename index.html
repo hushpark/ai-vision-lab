@@ -9,6 +9,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+  <!-- 화면 캡처용 라이브러리 -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -32,17 +34,13 @@
     .card { background: white; border-radius: 8px; border: 1px solid #e0e0e0; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .card-title { font-size: 18px; font-weight: bold; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 15px; color: #0056b3; }
 
-    /* 미디어 영역 - 캔버스 100% 오토 스케일링 */
     .media-wrapper { 
       position: relative; 
       width: 100%; 
-      height: 420px; 
       background: #1e1e1e; 
-      display: flex; 
-      justify-content: center; 
-      align-items: center; 
       border-radius: 6px; 
       overflow: hidden; 
+      text-align: center;
     }
     .media-wrapper canvas, .media-wrapper video, .media-wrapper img { 
       max-width: 100%; 
@@ -54,6 +52,11 @@
     .controls { margin-top: 15px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
     .btn { background: #0056b3; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; }
     .btn:hover { background: #003d80; }
+    .btn-green { background: #27ae60; }
+    .btn-green:hover { background: #1e8449; }
+    .btn-orange { background: #e67e22; }
+    .btn-orange:hover { background: #d35400; }
+
     .sample-images { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 5px; }
     .sample-img { width: 100%; height: 55px; object-fit: cover; border: 2px solid transparent; border-radius: 4px; cursor: pointer; }
     .sample-img.selected { border-color: #0056b3; }
@@ -74,6 +77,11 @@
     .concept-card { background: #fff; border-top: 4px solid #0056b3; }
     .concept-card h3 { font-size: 16px; color: #0056b3; margin-bottom: 10px; }
     .concept-card p { font-size: 13px; color: #555; line-height: 1.6; }
+
+    /* 추가된 스타일: 사전 단어 모달/박스 */
+    .dict-box { display: none; background: #fff; border: 1px solid #0056b3; padding: 15px; border-radius: 6px; margin-top: 15px; font-size: 12px; }
+    .dict-list { max-height: 120px; overflow-y: auto; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .dict-tag { background: #e0e0e0; padding: 2px 6px; border-radius: 3px; }
   </style>
 </head>
 <body>
@@ -156,9 +164,9 @@
         </div>
       </div>
 
-      <!-- Mode B: 2번 통합 캔버스 렌더링 방식 -->
+      <!-- Mode B -->
       <div id="modeB" class="mode-panel grid-2">
-        <div class="card">
+        <div class="card" id="modeB_leftCard">
           <div class="card-title">🖼️ 샘플 이미지 분석</div>
           <div class="media-wrapper">
             <canvas id="canvas2B"></canvas>
@@ -166,6 +174,23 @@
           <div class="controls">
             <button class="btn" onclick="detect2B()">분석하기</button>
             <span style="font-size:13px;">내 사진 올리기: <input type="file" id="upload2B" accept="image/*"></span>
+          </div>
+
+          <!-- 💡 80가지 단어 사전 관리 및 커스텀 추가 기능 -->
+          <button class="btn btn-orange" style="margin-top: 15px; width: 100%;" onclick="toggleDictBox()">
+            💡 AI 탐지 가능 80가지 단어 사전 (확인 / 추가)
+          </button>
+          
+          <div class="dict-box" id="dictBox">
+            <h4 style="margin-bottom: 5px;">📚 현재 등록된 한글 번역 사전 (총 80종 포함)</h4>
+            <div class="dict-list" id="dictList"></div>
+            
+            <h4 style="margin-bottom: 5px;">➕ 커스텀 번역 단어 등록/수정</h4>
+            <div style="display:flex; gap:5px;">
+              <input type="text" id="customEng" placeholder="영문 Class (예: keyboard)" style="flex:1; padding:4px;">
+              <input type="text" id="customKor" placeholder="한글 라벨 (예: 키보드)" style="flex:1; padding:4px;">
+              <button class="btn" onclick="addCustomLabel()">단어 추가</button>
+            </div>
           </div>
         </div>
 
@@ -180,18 +205,26 @@
             </div>
           </div>
 
-          <div class="card">
+          <div class="card" id="modeB_rightCard">
             <div class="card-title">📊 탐지 결과 & 교재 활동</div>
             <table>
               <thead><tr><th>탐지된 객체</th><th>신뢰도</th></tr></thead>
               <tbody id="table2B"><tr><td colspan="2">분석 버튼을 누르세요.</td></tr></tbody>
             </table>
+            
             <div class="activity-box">
               <h4>📝 함께 해결하기 (교재 활동지)</h4>
+              <p>학생 이름: <input type="text" id="studentName" placeholder="홍길동" style="width:100px; padding:2px; margin-bottom:5px;"></p>
               <p>1. 눈으로 보이지만 탐지하지 못한 객체는?</p>
-              <textarea placeholder="예: 구석의 조명등"></textarea>
+              <textarea id="ans1" placeholder="예: 구석의 조명등"></textarea>
               <p style="margin-top: 5px;">2. 탐지하지 못한 이유는?</p>
-              <textarea placeholder="예: 배경과 색상이 비슷함"></textarea>
+              <textarea id="ans2" placeholder="예: 배경과 색상이 비슷함"></textarea>
+
+              <!-- 💾 제출/저장 기능 (방법 A) -->
+              <div style="display:flex; gap:8px; margin-top:10px;">
+                <button class="btn btn-green" style="flex:1; font-size:12px;" onclick="downloadTXT()">💾 TXT 활동지 저장</button>
+                <button class="btn btn-green" style="flex:1; font-size:12px;" onclick="downloadScreenshot()">📷 실습 화면 캡처 저장</button>
+              </div>
             </div>
           </div>
         </div>
@@ -279,18 +312,26 @@
   </div>
 
   <script>
-    const labelKor = {
+    // COCO-SSD 80가지 한글 매핑 사전에 추가 카테고리 확충
+    let labelKor = {
       'person': '사람', 'bicycle': '자전거', 'car': '자동차', 'motorcycle': '오토바이',
       'airplane': '비행기', 'bus': '버스', 'train': '기차', 'truck': '트럭', 'boat': '보트',
-      'traffic light': '신호등', 'fire hydrant': '소화전', 'bench': '벤치', 'bird': '새',
-      'cat': '고양이', 'dog': '강아지', 'horse': '말', 'backpack': '배낭', 'umbrella': '우산',
-      'handbag': '핸드백', 'tie': '넥타이', 'suitcase': '여행가방', 'bottle': '병',
-      'wine glass': '와인잔', 'cup': '컵', 'fork': '포크', 'knife': '칼', 'spoon': '숟가락',
-      'bowl': '그릇', 'banana': '바나나', 'apple': '사과', 'sandwich': '샌드위치', 'chair': '의자',
-      'couch': '소파', 'potted plant': '화분', 'bed': '침대', 'dining table': '식탁',
-      'tv': 'TV', 'laptop': '노트북', 'mouse': '마우스', 'remote': '리모컨', 'keyboard': '키보드',
-      'cell phone': '휴대폰', 'book': '책', 'clock': '시계', 'vase': '꽃병', 'scissors': '가위',
-      'camera': '카메라'
+      'traffic light': '신호등', 'fire hydrant': '소화전', 'stop sign': '정지 표지판',
+      'parking meter': '주차요금기', 'bench': '벤치', 'bird': '새', 'cat': '고양이', 'dog': '강아지',
+      'horse': '말', 'sheep': '양', 'cow': '소', 'elephant': '코끼리', 'bear': '곰', 'zebra': '얼룩말',
+      'giraffe': '기린', 'backpack': '배낭', 'umbrella': '우산', 'handbag': '핸드백', 'tie': '넥타이',
+      'suitcase': '여행가방', 'frisbee': '원반', 'skis': '스키', 'snowboard': '스노보드',
+      'sports ball': '공', 'kite': '연', 'baseball bat': '야구방망이', 'baseball glove': '야구글러브',
+      'skateboard': '스케이트보드', 'surfboard': '서프보드', 'tennis racket': '테니스라켓',
+      'bottle': '병', 'wine glass': '와인잔', 'cup': '컵', 'fork': '포크', 'knife': '칼', 'spoon': '숟가락',
+      'bowl': '그릇', 'banana': '바나나', 'apple': '사과', 'sandwich': '샌드위치', 'orange': '오렌지',
+      'broccoli': '브로콜리', 'carrot': '당근', 'hot dog': '핫도그', 'pizza': '피자', 'donut': '도넛',
+      'cake': '케이크', 'chair': '의자', 'couch': '소파', 'potted plant': '화분', 'bed': '침대',
+      'dining table': '식탁', 'toilet': '변기', 'tv': 'TV', 'laptop': '노트북', 'mouse': '마우스',
+      'remote': '리모컨', 'keyboard': '키보드', 'cell phone': '휴대폰', 'microwave': '전자레인지',
+      'oven': '오븐', 'toaster': '토스터', 'sink': '싱크대', 'refrigerator': '냉장고', 'book': '책',
+      'clock': '시계', 'vase': '꽃병', 'scissors': '가위', 'teddy bear': '곰인형', 'hair drier': '헤어드라이어',
+      'toothbrush': '칫솔', 'camera': '카메라'
     };
 
     function showSection(sectionId, btn) {
@@ -354,6 +395,7 @@
         canvas.style.top = img1.offsetTop + 'px';
         hands1.send({ image: img1 });
       };
+      renderDictList();
     });
 
     function startHandTracking() {
@@ -481,7 +523,7 @@
       reader.readAsDataURL(e.target.files[0]);
     };
 
-    // --- Mode B: 캔버스 통합 렌더링 방식 (오차 0%) ---
+    // Mode B: 캔버스 통합 렌더링
     const canvas2B = document.getElementById('canvas2B');
     const ctx2B = canvas2B.getContext('2d');
     let currentImg2B = new Image();
@@ -490,10 +532,8 @@
     function loadSample2B(url) {
       currentImg2B.src = url;
       currentImg2B.onload = () => {
-        // 캔버스 자체 해상도를 이미지 원본 해상도와 1:1로 일치
         canvas2B.width = currentImg2B.naturalWidth;
         canvas2B.height = currentImg2B.naturalHeight;
-        // 이미지를 캔버스 배경으로 그리기
         ctx2B.drawImage(currentImg2B, 0, 0);
         document.getElementById('table2B').innerHTML = '<tr><td colspan="2">분석 버튼을 누르세요.</td></tr>';
       };
@@ -516,15 +556,12 @@
     async function detect2B() {
       if (!cocoModel || !currentImg2B.complete) return;
 
-      // 1. 캔버스 배경에 원본 이미지 그리기
       ctx2B.drawImage(currentImg2B, 0, 0, canvas2B.width, canvas2B.height);
 
-      // 2. AI 사물 탐지 수행
       const predictions = await cocoModel.detect(currentImg2B);
       const tableBody = document.getElementById('table2B');
       tableBody.innerHTML = '';
 
-      // 원본 해상도 비율 기준 글자 크기 및 선 두께 보정
       const fontSize = Math.max(16, Math.round(canvas2B.width / 35));
       const lineWidth = Math.max(3, Math.round(canvas2B.width / 200));
 
@@ -532,12 +569,10 @@
         const [x, y, w, h] = p.bbox;
         const nameKor = labelKor[p.class] || p.class;
 
-        // 초록색 테두리 상자
         ctx2B.strokeStyle = '#00e676';
         ctx2B.lineWidth = lineWidth;
         ctx2B.strokeRect(x, y, w, h);
 
-        // 한글 라벨 텍스트 박스
         const label = `${nameKor} (${Math.round(p.score * 100)}%)`;
         ctx2B.font = `bold ${fontSize}px sans-serif`;
         const textWidth = ctx2B.measureText(label).width;
@@ -554,6 +589,66 @@
       if (predictions.length === 0) {
         tableBody.innerHTML = '<tr><td colspan="2">탐지된 객체가 없습니다.</td></tr>';
       }
+    }
+
+    // 💡 단어 사전 UI 처리 함수
+    function toggleDictBox() {
+      const box = document.getElementById('dictBox');
+      box.style.display = box.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function renderDictList() {
+      const container = document.getElementById('dictList');
+      container.innerHTML = '';
+      for (const [eng, kor] of Object.entries(labelKor)) {
+        container.innerHTML += `<span class="dict-tag"><b>${eng}</b>: ${kor}</span>`;
+      }
+    }
+
+    function addCustomLabel() {
+      const eng = document.getElementById('customEng').value.trim().toLowerCase();
+      const kor = document.getElementById('customKor').value.trim();
+      if (eng && kor) {
+        labelKor[eng] = kor;
+        renderDictList();
+        document.getElementById('customEng').value = '';
+        document.getElementById('customKor').value = '';
+        alert(`✅ 단어가 추가되었습니다: [${eng} -> ${kor}]`);
+      } else {
+        alert("영문 클래스와 한글 라벨을 모두 입력해 주세요.");
+      }
+    }
+
+    // 💾 활동지 TXT 파일 다운로드 기능
+    function downloadTXT() {
+      const name = document.getElementById('studentName').value || '익명';
+      const ans1 = document.getElementById('ans1').value || '(작성 내용 없음)';
+      const ans2 = document.getElementById('ans2').value || '(작성 내용 없음)';
+
+      const content = `[AI 컴퓨터 비전 실습 활동지]\n` +
+                      `이름: ${name}\n` +
+                      `작성 날짜: ${new Date().toLocaleString()}\n\n` +
+                      `1. 눈으로 보이지만 탐지하지 못한 객체:\n${ans1}\n\n` +
+                      `2. 탐지하지 못한 이유:\n${ans2}\n`;
+
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `AI비전실습_활동지_${name}.txt`;
+      a.click();
+    }
+
+    // 📷 실습 화면 캡처 저장 기능
+    function downloadScreenshot() {
+      const name = document.getElementById('studentName').value || '익명';
+      const target = document.getElementById('sec2');
+
+      html2canvas(target).then(canvas => {
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = `AI비전실습_결과캡처_${name}.png`;
+        a.click();
+      });
     }
 
     // Section 3
