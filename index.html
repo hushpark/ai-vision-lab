@@ -32,7 +32,7 @@
     .card { background: white; border-radius: 8px; border: 1px solid #e0e0e0; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .card-title { font-size: 18px; font-weight: bold; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 15px; color: #0056b3; }
 
-    /* [해결 1] 높이 고정 및 이미지 정중앙 배치 */
+    /* 미디어 영역 - Mode A & B 통일 레버리지 */
     .media-wrapper { 
       position: relative; 
       width: 100%; 
@@ -479,7 +479,7 @@
       reader.readAsDataURL(e.target.files[0]);
     };
 
-    // Mode B: 정밀 위치 밀착 해결 구문
+    // Mode B: Mode A와 동일한 스케일링으로 좌표 오차 0%화
     const img2B = document.getElementById('image2B');
     const canvas2B = document.getElementById('canvas2B');
     const ctx2B = canvas2B.getContext('2d');
@@ -505,11 +505,11 @@
       reader.readAsDataURL(e.target.files[0]);
     };
 
-    /* [해결 2] 캔버스 크기를 이미지 실제 표시 영역 크기와 위치로 정밀 고정 */
+    /* Mode A와 동일한 좌표 스케일링 계산 로직 적용 */
     async function detect2B() {
       if (!cocoModel) return;
 
-      // 이미지가 상자 내부에서 배치된 실제 위치와 크기 구하기
+      // 캔버스 위치와 크기를 렌더링된 이미지 크기와 1:1 대응
       canvas2B.width = img2B.clientWidth;
       canvas2B.height = img2B.clientHeight;
       canvas2B.style.left = img2B.offsetLeft + 'px';
