@@ -32,37 +32,23 @@
     .card { background: white; border-radius: 8px; border: 1px solid #e0e0e0; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .card-title { font-size: 18px; font-weight: bold; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 15px; color: #0056b3; }
 
-    /* 검은 여백 프레임 */
+    /* 핵심 보정: 캔버스와 이미지를 1:1로 감싸서 여백 오차 0%화 */
     .media-wrapper { 
       position: relative; 
       width: 100%; 
-      height: 420px; 
       background: #1e1e1e; 
-      display: flex; 
-      justify-content: center; 
-      align-items: center; 
       border-radius: 6px; 
       overflow: hidden; 
+      text-align: center;
     }
-    
-    /* 핵심 보정: 이미지를 감싸는 컨테이너 구조로 캔버스 위치 100% 밀착 */
-    .img-relative-box {
-      position: relative;
-      display: inline-block;
-      max-width: 100%;
-      max-height: 420px;
-    }
-    .img-relative-box img, .img-relative-box video { 
+    .media-wrapper img, .media-wrapper video { 
       max-width: 100%; 
       max-height: 420px; 
-      display: block; 
+      display: inline-block; 
+      vertical-align: middle;
     }
-    .img-relative-box canvas { 
+    canvas { 
       position: absolute; 
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
       pointer-events: none; 
     }
 
@@ -111,11 +97,9 @@
         <div class="card">
           <div class="card-title">🖐️ 실시간 손가락 랜드마크 추적</div>
           <div class="media-wrapper">
-            <div class="img-relative-box">
-              <video id="webcam1" autoplay playsinline style="display:none;"></video>
-              <img id="image1" src="https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=800" crossorigin="anonymous">
-              <canvas id="canvas1"></canvas>
-            </div>
+            <video id="webcam1" autoplay playsinline style="display:none;"></video>
+            <img id="image1" src="https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=800" crossorigin="anonymous">
+            <canvas id="canvas1"></canvas>
           </div>
           <div class="controls">
             <button class="btn" onclick="startHandTracking()">카메라 시작</button>
@@ -148,11 +132,9 @@
         <div class="card">
           <div class="card-title">🎥 실시간 사물 인식 (웹캠 / 파일)</div>
           <div class="media-wrapper">
-            <div class="img-relative-box">
-              <video id="webcam2A" autoplay playsinline style="display:none;"></video>
-              <img id="image2A" src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800" crossorigin="anonymous">
-              <canvas id="canvas2A"></canvas>
-            </div>
+            <video id="webcam2A" autoplay playsinline style="display:none;"></video>
+            <img id="image2A" src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800" crossorigin="anonymous">
+            <canvas id="canvas2A"></canvas>
           </div>
           <div class="controls">
             <button class="btn" onclick="startWebcam2A()">웹캠 켜기</button>
@@ -180,10 +162,8 @@
         <div class="card">
           <div class="card-title">🖼️ 샘플 이미지 분석</div>
           <div class="media-wrapper">
-            <div class="img-relative-box">
-              <img id="image2B" src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800" crossorigin="anonymous">
-              <canvas id="canvas2B"></canvas>
-            </div>
+            <img id="image2B" src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800" crossorigin="anonymous">
+            <canvas id="canvas2B"></canvas>
           </div>
           <div class="controls">
             <button class="btn" onclick="detect2B()">분석하기</button>
@@ -231,10 +211,8 @@
         <div class="card">
           <div class="card-title">✊✌️🖐️ AI vs 나: 가위바위보</div>
           <div class="media-wrapper">
-            <div class="img-relative-box">
-              <video id="webcamG1" autoplay playsinline></video>
-              <canvas id="canvasG1"></canvas>
-            </div>
+            <video id="webcamG1" autoplay playsinline></video>
+            <canvas id="canvasG1"></canvas>
           </div>
           <div class="controls">
             <button class="btn" onclick="startGame1()">게임 시작 (카메라)</button>
@@ -255,10 +233,8 @@
         <div class="card">
           <div class="card-title">🔍 AI 보물찾기 (Scavenger Hunt)</div>
           <div class="media-wrapper">
-            <div class="img-relative-box">
-              <video id="webcamG2" autoplay playsinline></video>
-              <canvas id="canvasG2"></canvas>
-            </div>
+            <video id="webcamG2" autoplay playsinline></video>
+            <canvas id="canvasG2"></canvas>
           </div>
           <div class="controls">
             <button class="btn" onclick="nextMissionGame2()">게임 시작 / 다음 미션</button>
@@ -376,6 +352,8 @@
         const canvas = document.getElementById('canvas1');
         canvas.width = img1.clientWidth;
         canvas.height = img1.clientHeight;
+        canvas.style.left = img1.offsetLeft + 'px';
+        canvas.style.top = img1.offsetTop + 'px';
         hands1.send({ image: img1 });
       };
     });
@@ -384,11 +362,13 @@
       const video = document.getElementById('webcam1');
       const canvas = document.getElementById('canvas1');
       document.getElementById('image1').style.display = 'none';
-      video.style.display = 'block';
+      video.style.display = 'inline-block';
       camera1 = new Camera(video, {
         onFrame: async () => { 
           canvas.width = video.clientWidth;
           canvas.height = video.clientHeight;
+          canvas.style.left = video.offsetLeft + 'px';
+          canvas.style.top = video.offsetTop + 'px';
           await hands1.send({ image: video }); 
         },
         width: 640, height: 480
@@ -401,7 +381,7 @@
     function stopHandTracking() {
       if (camera1) { camera1.stop(); }
       document.getElementById('webcam1').style.display = 'none';
-      document.getElementById('image1').style.display = 'block';
+      document.getElementById('image1').style.display = 'inline-block';
       document.getElementById('status1').innerText = "카메라 중지됨";
       document.getElementById('status1').style.color = "#e67e22";
     }
@@ -433,8 +413,11 @@
       if (!cocoModel) return;
       const target = isWebcam2A ? video2A : img2A;
       
+      // 캔버스를 실제 이미지 위치와 렌더링 크기에 직접 밀착
       canvas2A.width = target.clientWidth;
       canvas2A.height = target.clientHeight;
+      canvas2A.style.left = target.offsetLeft + 'px';
+      canvas2A.style.top = target.offsetTop + 'px';
 
       const predictions = await cocoModel.detect(target);
       const minScore = slider.value / 100;
@@ -473,7 +456,7 @@
       navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
         isWebcam2A = true;
         img2A.style.display = 'none';
-        video2A.style.display = 'block';
+        video2A.style.display = 'inline-block';
         video2A.srcObject = stream;
         video2A.onloadeddata = () => detectFrame2A();
       }).catch(() => alert("카메라를 연결할 수 없습니다."));
@@ -483,7 +466,7 @@
       if (video2A.srcObject) {
         video2A.srcObject.getTracks().forEach(t => t.stop());
         video2A.style.display = 'none';
-        img2A.style.display = 'block';
+        img2A.style.display = 'inline-block';
         isWebcam2A = false;
         cancelAnimationFrame(animId2A);
         ctx2A.clearRect(0, 0, canvas2A.width, canvas2A.height);
@@ -500,7 +483,7 @@
       reader.readAsDataURL(e.target.files[0]);
     };
 
-    // Mode B: 이미지와 캔버스 1:1 결합 구조 적용
+    // Mode B: 이미지 offsetLeft를 캔버스 style.left에 보정하여 밀착
     const img2B = document.getElementById('image2B');
     const canvas2B = document.getElementById('canvas2B');
     const ctx2B = canvas2B.getContext('2d');
@@ -529,9 +512,11 @@
     async function detect2B() {
       if (!cocoModel) return;
 
-      // 캔버스 크기를 이미지 요소의 실제 표시 크기와 정확히 똑같이 맞춤
+      // 이미지의 실제 화면 렌더링 크기 및 시작 위치로 캔버스 위치 강제 밀착
       canvas2B.width = img2B.clientWidth;
       canvas2B.height = img2B.clientHeight;
+      canvas2B.style.left = img2B.offsetLeft + 'px';
+      canvas2B.style.top = img2B.offsetTop + 'px';
 
       ctx2B.clearRect(0, 0, canvas2B.width, canvas2B.height);
 
@@ -616,6 +601,8 @@
         onFrame: async () => { 
           canvas.width = video.clientWidth;
           canvas.height = video.clientHeight;
+          canvas.style.left = video.offsetLeft + 'px';
+          canvas.style.top = video.offsetTop + 'px';
           await handsG1.send({ image: video }); 
         },
         width: 640, height: 480
@@ -653,6 +640,8 @@
       if (!isPlayingG2) return;
       canvasG2.width = videoG2.clientWidth;
       canvasG2.height = videoG2.clientHeight;
+      canvasG2.style.left = videoG2.offsetLeft + 'px';
+      canvasG2.style.top = videoG2.offsetTop + 'px';
 
       const predictions = await cocoModel.detect(videoG2);
       ctxG2.clearRect(0, 0, canvasG2.width, canvasG2.height);
