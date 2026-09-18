@@ -32,11 +32,10 @@
     .card { background: white; border-radius: 8px; border: 1px solid #e0e0e0; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .card-title { font-size: 18px; font-weight: bold; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 15px; color: #0056b3; }
 
-    /* 미디어 영역 - 여백 및 정렬 고정 */
+    /* 미디어 영역: Mode A와 Mode B 동일 정밀 1:1 레이아웃 */
     .media-wrapper { 
       position: relative; 
       width: 100%; 
-      height: 420px; 
       background: #1e1e1e; 
       display: flex; 
       justify-content: center; 
@@ -46,10 +45,8 @@
     }
     .media-wrapper img, .media-wrapper video { 
       max-width: 100%; 
-      max-height: 420px; 
-      object-fit: contain; 
+      height: auto; 
       display: block; 
-      margin: 0 auto;
     }
     canvas { 
       position: absolute; 
@@ -61,8 +58,8 @@
     .controls { margin-top: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     .btn { background: #0056b3; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; }
     .btn:hover { background: #003d80; }
-    .sample-images { display: flex; gap: 10px; margin-bottom: 12px; }
-    .sample-img { width: 80px; height: 60px; object-fit: cover; border: 2px solid transparent; border-radius: 4px; cursor: pointer; }
+    .sample-images { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 5px; }
+    .sample-img { width: 100%; height: 55px; object-fit: cover; border: 2px solid transparent; border-radius: 4px; cursor: pointer; }
     .sample-img.selected { border-color: #0056b3; }
 
     table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
@@ -163,41 +160,48 @@
         </div>
       </div>
 
-      <!-- Mode B -->
+      <!-- Mode B: 1열과 2열 구조 개편 -->
       <div id="modeB" class="mode-panel grid-2">
+        <!-- 1열: 샘플 이미지 분석 (Mode A처럼 깔끔한 이미지 뷰어) -->
         <div class="card">
-          <div class="card-title">🖼️ 샘플 이미지 분석 (교재용)</div>
-          <div class="sample-images">
-            <img src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800" class="sample-img selected" title="거실 공간" onclick="selectSample2B(this)">
-            <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800" class="sample-img" title="사람과 동물" onclick="selectSample2B(this)">
-            <img src="https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=800" class="sample-img" title="강아지" onclick="selectSample2B(this)">
-            <img src="https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800" class="sample-img" title="책상 소품" onclick="selectSample2B(this)">
-          </div>
-          <div style="font-size: 13px; margin-bottom: 10px;">
-            내 사진 직접 올리기: <input type="file" id="upload2B" accept="image/*">
-          </div>
+          <div class="card-title">🖼️ 샘플 이미지 분석</div>
           <div class="media-wrapper">
-            <img id="image2B" src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800" crossorigin="anonymous">
+            <img id="image2B" src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800" crossorigin="anonymous" onload="detect2B()">
             <canvas id="canvas2B"></canvas>
           </div>
           <div class="controls">
             <button class="btn" onclick="detect2B()">분석하기</button>
-            <span id="status2B" class="status-text"></span>
+            <span style="font-size:13px; margin-left:10px;">내 사진 올리기: <input type="file" id="upload2B" accept="image/*"></span>
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-title">📊 탐지 결과 & 교재 활동</div>
-          <table>
-            <thead><tr><th>탐지된 객체</th><th>신뢰도</th></tr></thead>
-            <tbody id="table2B"><tr><td colspan="2">분석 버튼을 누르세요.</td></tr></tbody>
-          </table>
-          <div class="activity-box">
-            <h4>📝 함께 해결하기 (교재 활동지)</h4>
-            <p>1. 눈으로 보이지만 탐지하지 못한 객체는?</p>
-            <textarea placeholder="예: 구석의 조명등"></textarea>
-            <p style="margin-top: 5px;">2. 탐지하지 못한 이유는?</p>
-            <textarea placeholder="예: 배경과 색상이 비슷함"></textarea>
+        <!-- 2열: 1행(예시 이미지 선택) + 2행(탐지 결과 및 교재 활동) -->
+        <div style="display:flex; flex-direction:column; gap:20px;">
+          <!-- 2열 1행 카드: 예시 그림 선택 -->
+          <div class="card">
+            <div class="card-title">🖼️ 예시 이미지 선택</div>
+            <div class="sample-images">
+              <img src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800" class="sample-img selected" title="거실 공간" onclick="selectSample2B(this)">
+              <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800" class="sample-img" title="사람과 동물" onclick="selectSample2B(this)">
+              <img src="https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=800" class="sample-img" title="강아지" onclick="selectSample2B(this)">
+              <img src="https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800" class="sample-img" title="책상 소품" onclick="selectSample2B(this)">
+            </div>
+          </div>
+
+          <!-- 2열 2행 카드: 탐지 결과 & 교재 활동 -->
+          <div class="card">
+            <div class="card-title">📊 탐지 결과 & 교재 활동</div>
+            <table>
+              <thead><tr><th>탐지된 객체</th><th>신뢰도</th></tr></thead>
+              <tbody id="table2B"><tr><td colspan="2">분석 버튼을 누르세요.</td></tr></tbody>
+            </table>
+            <div class="activity-box">
+              <h4>📝 함께 해결하기 (교재 활동지)</h4>
+              <p>1. 눈으로 보이지만 탐지하지 못한 객체는?</p>
+              <textarea placeholder="예: 구석의 조명등"></textarea>
+              <p style="margin-top: 5px;">2. 탐지하지 못한 이유는?</p>
+              <textarea placeholder="예: 배경과 색상이 비슷함"></textarea>
+            </div>
           </div>
         </div>
       </div>
@@ -315,6 +319,7 @@
       document.getElementById(modeId).classList.add('active');
       btn.classList.add('active');
       stopWebcam2A();
+      if(modeId === 'modeB') setTimeout(detect2B, 100);
     }
 
     function switchGame(gameId, btn) {
@@ -385,7 +390,7 @@
       document.getElementById('status1').style.color = "#e67e22";
     }
 
-    // Section 2
+    // Section 2 - Mode A & B
     let cocoModel;
     let isWebcam2A = false;
     let animId2A;
@@ -411,10 +416,9 @@
     async function detectFrame2A() {
       if (!cocoModel) return;
       const target = isWebcam2A ? video2A : img2A;
-      const wrapper = target.parentElement;
-
-      canvas2A.width = wrapper.clientWidth;
-      canvas2A.height = wrapper.clientHeight;
+      
+      canvas2A.width = target.clientWidth;
+      canvas2A.height = target.clientHeight;
 
       const predictions = await cocoModel.detect(target);
       const minScore = slider.value / 100;
@@ -423,25 +427,15 @@
       const tableBody = document.getElementById('table2A');
       tableBody.innerHTML = '';
 
-      const naturalW = isWebcam2A ? video2A.videoWidth : (img2A.naturalWidth || wrapper.clientWidth);
-      const naturalH = isWebcam2A ? video2A.videoHeight : (img2A.naturalHeight || wrapper.clientHeight);
-
-      const scaleX = wrapper.clientWidth / naturalW;
-      const scaleY = wrapper.clientHeight / naturalH;
-      const scale = Math.min(scaleX, scaleY);
-
-      const renderWidth = naturalW * scale;
-      const renderHeight = naturalH * scale;
-
-      const offsetX = (wrapper.clientWidth - renderWidth) / 2;
-      const offsetY = (wrapper.clientHeight - renderHeight) / 2;
+      const scaleX = target.clientWidth / (isWebcam2A ? video2A.videoWidth : (img2A.naturalWidth || target.clientWidth));
+      const scaleY = target.clientHeight / (isWebcam2A ? video2A.videoHeight : (img2A.naturalHeight || target.clientHeight));
 
       predictions.filter(p => p.score >= minScore).forEach(p => {
         const [x, y, w, h] = p.bbox;
-        const rx = x * scale + offsetX;
-        const ry = y * scale + offsetY;
-        const rw = w * scale;
-        const rh = h * scale;
+        const rx = x * scaleX;
+        const ry = y * scaleY;
+        const rw = w * scaleX;
+        const rh = h * scaleY;
 
         const nameKor = labelKor[p.class] || p.class;
 
@@ -490,7 +484,7 @@
       reader.readAsDataURL(e.target.files[0]);
     };
 
-    // Mode B: 수학적 오프셋 보정 완료
+    // Mode B: Mode A 구조와 동일하게 일치시켜 좌표 오차 0%화
     const img2B = document.getElementById('image2B');
     const canvas2B = document.getElementById('canvas2B');
     const ctx2B = canvas2B.getContext('2d');
@@ -501,6 +495,7 @@
       img2B.src = el.src;
       ctx2B.clearRect(0, 0, canvas2B.width, canvas2B.height);
       document.getElementById('table2B').innerHTML = '<tr><td colspan="2">분석 버튼을 누르세요.</td></tr>';
+      img2B.onload = () => detect2B();
     }
 
     document.getElementById('upload2B').onchange = (e) => {
@@ -508,78 +503,54 @@
       reader.onload = (evt) => {
         img2B.src = evt.target.result;
         ctx2B.clearRect(0, 0, canvas2B.width, canvas2B.height);
+        img2B.onload = () => detect2B();
       };
       reader.readAsDataURL(e.target.files[0]);
     };
 
     async function detect2B() {
-      if (!cocoModel) return;
+      if (!cocoModel || !img2B.complete) return;
 
-      const wrapper = img2B.parentElement;
+      canvas2B.width = img2B.clientWidth;
+      canvas2B.height = img2B.clientHeight;
 
-      // 1. 이미지가 실제 화면에 배치될 때까지 렌더링 프레임을 기다린 후 크기 측정
-      requestAnimationFrame(async () => {
-        // 캔버스를 검은 상자 전체 영역에 정확히 밀착
-        canvas2B.width = wrapper.clientWidth;
-        canvas2B.height = wrapper.clientHeight;
-        canvas2B.style.position = 'absolute';
-        canvas2B.style.left = '0px';
-        canvas2B.style.top = '0px';
+      ctx2B.clearRect(0, 0, canvas2B.width, canvas2B.height);
 
-        ctx2B.clearRect(0, 0, canvas2B.width, canvas2B.height);
+      const predictions = await cocoModel.detect(img2B);
+      const tableBody = document.getElementById('table2B');
+      tableBody.innerHTML = '';
 
-        const predictions = await cocoModel.detect(img2B);
-        const tableBody = document.getElementById('table2B');
-        tableBody.innerHTML = '';
+      const scaleX = img2B.clientWidth / (img2B.naturalWidth || img2B.clientWidth);
+      const scaleY = img2B.clientHeight / (img2B.naturalHeight || img2B.clientHeight);
 
-        // 2. 검은 상자 내부에서 이미지가 가로/세로 중앙 정렬될 때 발생하는 여백(Letterbox) 정밀 산출
-        const naturalW = img2B.naturalWidth || img2B.clientWidth;
-        const naturalH = img2B.naturalHeight || img2B.clientHeight;
+      predictions.forEach(p => {
+        const [x, y, w, h] = p.bbox;
+        const rx = x * scaleX;
+        const ry = y * scaleY;
+        const rw = w * scaleX;
+        const rh = h * scaleY;
 
-        const scaleX = wrapper.clientWidth / naturalW;
-        const scaleY = wrapper.clientHeight / naturalH;
-        const scale = Math.min(scaleX, scaleY);
+        const nameKor = labelKor[p.class] || p.class;
 
-        const renderWidth = naturalW * scale;
-        const renderHeight = naturalH * scale;
+        ctx2B.strokeStyle = '#00e676';
+        ctx2B.lineWidth = 3;
+        ctx2B.strokeRect(rx, ry, rw, rh);
 
-        // 중앙 정렬 오프셋 (좌우 및 상하 여백)
-        const offsetX = (wrapper.clientWidth - renderWidth) / 2;
-        const offsetY = (wrapper.clientHeight - renderHeight) / 2;
+        ctx2B.fillStyle = '#00e676';
+        ctx2B.font = 'bold 13px sans-serif';
+        const label = `${nameKor} (${Math.round(p.score * 100)}%)`;
+        const textWidth = ctx2B.measureText(label).width;
 
-        predictions.forEach(p => {
-          const [x, y, w, h] = p.bbox;
+        ctx2B.fillRect(rx, ry > 20 ? ry - 20 : ry, textWidth + 8, 20);
+        ctx2B.fillStyle = '#000000';
+        ctx2B.fillText(label, rx + 4, ry > 20 ? ry - 5 : ry + 15);
 
-          // 여백을 더해 실제 화면 사물 위치로 정밀 이동
-          const rx = x * scale + offsetX;
-          const ry = y * scale + offsetY;
-          const rw = w * scale;
-          const rh = h * scale;
-
-          const nameKor = labelKor[p.class] || p.class;
-
-          // 초록색 테두리 상자
-          ctx2B.strokeStyle = '#00e676';
-          ctx2B.lineWidth = 3;
-          ctx2B.strokeRect(rx, ry, rw, rh);
-
-          // 한글 이름 태그
-          ctx2B.fillStyle = '#00e676';
-          ctx2B.font = 'bold 13px sans-serif';
-          const label = `${nameKor} (${Math.round(p.score * 100)}%)`;
-          const textWidth = ctx2B.measureText(label).width;
-
-          ctx2B.fillRect(rx, ry > 20 ? ry - 20 : ry, textWidth + 8, 20);
-          ctx2B.fillStyle = '#000000';
-          ctx2B.fillText(label, rx + 4, ry > 20 ? ry - 5 : ry + 15);
-
-          tableBody.innerHTML += `<tr><td><b>${nameKor}</b></td><td>${Math.round(p.score * 100)}%</td></tr>`;
-        });
-
-        if (predictions.length === 0) {
-          tableBody.innerHTML = '<tr><td colspan="2">탐지된 객체가 없습니다.</td></tr>';
-        }
+        tableBody.innerHTML += `<tr><td><b>${nameKor}</b></td><td>${Math.round(p.score * 100)}%</td></tr>`;
       });
+
+      if (predictions.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="2">탐지된 객체가 없습니다.</td></tr>';
+      }
     }
 
     // Section 3
