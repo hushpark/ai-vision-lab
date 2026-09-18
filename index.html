@@ -32,7 +32,6 @@
     .card { background: white; border-radius: 8px; border: 1px solid #e0e0e0; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .card-title { font-size: 18px; font-weight: bold; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 15px; color: #0056b3; }
 
-    /* 미디어 영역: Mode A와 Mode B 동일 정밀 1:1 레이아웃 */
     .media-wrapper { 
       position: relative; 
       width: 100%; 
@@ -55,7 +54,7 @@
       pointer-events: none; 
     }
 
-    .controls { margin-top: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .controls { margin-top: 15px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
     .btn { background: #0056b3; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; }
     .btn:hover { background: #003d80; }
     .sample-images { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 5px; }
@@ -160,24 +159,23 @@
         </div>
       </div>
 
-      <!-- Mode B: 1열과 2열 구조 개편 -->
+      <!-- Mode B -->
       <div id="modeB" class="mode-panel grid-2">
-        <!-- 1열: 샘플 이미지 분석 (Mode A처럼 깔끔한 이미지 뷰어) -->
+        <!-- 1열: 샘플 이미지 분석 -->
         <div class="card">
           <div class="card-title">🖼️ 샘플 이미지 분석</div>
           <div class="media-wrapper">
-            <img id="image2B" src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800" crossorigin="anonymous" onload="detect2B()">
+            <img id="image2B" src="https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800" crossorigin="anonymous">
             <canvas id="canvas2B"></canvas>
           </div>
           <div class="controls">
             <button class="btn" onclick="detect2B()">분석하기</button>
-            <span style="font-size:13px; margin-left:10px;">내 사진 올리기: <input type="file" id="upload2B" accept="image/*"></span>
+            <span style="font-size:13px;">내 사진 올리기: <input type="file" id="upload2B" accept="image/*"></span>
           </div>
         </div>
 
-        <!-- 2열: 1행(예시 이미지 선택) + 2행(탐지 결과 및 교재 활동) -->
+        <!-- 2열 -->
         <div style="display:flex; flex-direction:column; gap:20px;">
-          <!-- 2열 1행 카드: 예시 그림 선택 -->
           <div class="card">
             <div class="card-title">🖼️ 예시 이미지 선택</div>
             <div class="sample-images">
@@ -188,7 +186,6 @@
             </div>
           </div>
 
-          <!-- 2열 2행 카드: 탐지 결과 & 교재 활동 -->
           <div class="card">
             <div class="card-title">📊 탐지 결과 & 교재 활동</div>
             <table>
@@ -319,7 +316,6 @@
       document.getElementById(modeId).classList.add('active');
       btn.classList.add('active');
       stopWebcam2A();
-      if(modeId === 'modeB') setTimeout(detect2B, 100);
     }
 
     function switchGame(gameId, btn) {
@@ -484,32 +480,34 @@
       reader.readAsDataURL(e.target.files[0]);
     };
 
-    // Mode B: Mode A 구조와 동일하게 일치시켜 좌표 오차 0%화
+    // Mode B: 수동 탐지 제어
     const img2B = document.getElementById('image2B');
     const canvas2B = document.getElementById('canvas2B');
     const ctx2B = canvas2B.getContext('2d');
+
+    function resetCanvas2B() {
+      ctx2B.clearRect(0, 0, canvas2B.width, canvas2B.height);
+      document.getElementById('table2B').innerHTML = '<tr><td colspan="2">분석 버튼을 누르세요.</td></tr>';
+    }
 
     function selectSample2B(el) {
       document.querySelectorAll('.sample-img').forEach(i => i.classList.remove('selected'));
       el.classList.add('selected');
       img2B.src = el.src;
-      ctx2B.clearRect(0, 0, canvas2B.width, canvas2B.height);
-      document.getElementById('table2B').innerHTML = '<tr><td colspan="2">분석 버튼을 누르세요.</td></tr>';
-      img2B.onload = () => detect2B();
+      resetCanvas2B();
     }
 
     document.getElementById('upload2B').onchange = (e) => {
       const reader = new FileReader();
       reader.onload = (evt) => {
         img2B.src = evt.target.result;
-        ctx2B.clearRect(0, 0, canvas2B.width, canvas2B.height);
-        img2B.onload = () => detect2B();
+        resetCanvas2B();
       };
       reader.readAsDataURL(e.target.files[0]);
     };
 
     async function detect2B() {
-      if (!cocoModel || !img2B.complete) return;
+      if (!cocoModel) return;
 
       canvas2B.width = img2B.clientWidth;
       canvas2B.height = img2B.clientHeight;
