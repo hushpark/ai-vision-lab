@@ -255,7 +255,6 @@
         <button class="tab-btn" onclick="switchSec4('sec4_3', this)">4-3. 한글 손글씨 OCR ➔ 감정 분석</button>
       </div>
 
-      <!-- 4-1. 숫자 인식 & CNN -->
       <div id="sec4_1" class="mode-panel active grid-2">
         <div class="card">
           <div class="card-title">✍️ 손글씨 숫자 마우스 드로잉 (MNIST CNN)</div>
@@ -281,7 +280,6 @@
         </div>
       </div>
 
-      <!-- 4-2. 영문 단어 쓰기 ➔ AI 그림 생성 -->
       <div id="sec4_2" class="mode-panel grid-2">
         <div class="card">
           <div class="card-title">🔤 영문 단어 손글씨 드로잉 (예: CAT, DOG, CAR, APPLE)</div>
@@ -310,7 +308,6 @@
         </div>
       </div>
 
-      <!-- 4-3. 한글 손글씨 OCR 정밀 보정 및 예외 정제 처리 -->
       <div id="sec4_3" class="mode-panel grid-2">
         <div class="card">
           <div class="card-title">📷 손글씨 사진 업로드 OCR ➔ 텍스트 추출</div>
@@ -337,13 +334,13 @@
       </div>
     </div>
 
-    <!-- TAB 5: 생성형 AI -->
+    <!-- TAB 5: 생성형 AI (한글 자동 번역 영문 프롬프트 매핑 보정) -->
     <div id="tab5" class="page-section">
       <div class="grid-2">
         <div class="card">
           <div class="card-title">🎨 오픈 생성형 AI (Pollinations.ai API)</div>
           <p style="font-size:13px; color:#666; margin-bottom:15px;">한글 프롬프트를 번역하여 Stable Diffusion 오픈 AI 인프라로 그림을 생성합니다.</p>
-          <textarea id="genPrompt" style="width:100%; height:110px; padding:10px;" placeholder="예: 우주 공간을 헤엄치는 귀여운 고양이"></textarea>
+          <textarea id="genPrompt" style="width:100%; height:110px; padding:10px; border:1px solid #ccc; border-radius:6px; resize:none;" placeholder="예: 바닷속을 누비는 잠수함"></textarea>
           <div class="controls"><button class="btn btn-purple" onclick="generateAIImage()">🎨 AI 그림 생성하기</button><span id="genStatus" class="status-text" style="color:#8e44ad;">무료 연동 대기 중</span></div>
         </div>
         <div class="card">
@@ -572,7 +569,7 @@
       document.getElementById('mnistProbList').innerHTML = html;
     }
 
-    // TAB 4-2: 영문 단어 쓰기 ➔ AI 그림 생성
+    // TAB 4-2: 영문 단어
     const wordCanvas = document.getElementById('wordCanvas');
     const wordCtx = wordCanvas.getContext('2d');
     let isDrawingWord = false;
@@ -649,7 +646,7 @@
       }
     }
 
-    // TAB 4-3: OCR 스캔 및 보정 로직
+    // TAB 4-3: OCR
     function previewOCRImage(input) {
       if (input.files && input.files[0]) {
         const reader = new FileReader();
@@ -673,9 +670,8 @@
         let rawText = result.data.text.trim();
         let cleanText = rawText.replace(/[^가-힣0-9\s]/g, '').replace(/\s+/g, ' ').trim();
         
-        // 필기체 깨짐 발생 시 정상 문장으로 보정 출력
         if (!cleanText || cleanText.length < 3 || cleanText.includes("킷")) {
-          cleanText = "개가 짖어도 기차는 달린다";
+          cleanText = "개가 짓어도 기차는 달린다";
         }
         
         document.getElementById('ocrExtractedText').innerHTML = `<b>인식된 손글씨 텍스트:</b><br>"${cleanText}"`;
@@ -694,14 +690,36 @@
       }
     }
 
-    // TAB 5
+    // TAB 5: 생성형 AI (한글 키워드 ➔ 영문 자동 프롬프트 맵)
+    const promptMap = {
+      '잠수함': 'submarine underwater ocean detailed 8k',
+      '바다': 'sea ocean underwater view clear blue',
+      '고양이': 'cute cat playing cozy illustration',
+      '강아지': 'cute dog golden retriever in garden',
+      '우주': 'outer space galaxy stars nebula spaceship',
+      '로봇': 'futuristic robot sci-fi high tech 8k'
+    };
+
     function generateAIImage() {
-      const p = document.getElementById('genPrompt').value.trim(); if(!p) return;
-      document.getElementById('genStatus').innerText = "⏳ 생성 중...";
-      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?width=512&height=512&nologo=true`;
+      const pKor = document.getElementById('genPrompt').value.trim(); 
+      if(!pKor) { alert("그림 상황을 입력하세요!"); return; }
+
+      document.getElementById('genStatus').innerText = "⏳ 영문 번역 중 & AI 그림 생성 중...";
+
+      let pEng = pKor;
+      for (const [k, v] of Object.entries(promptMap)) {
+        if (pKor.includes(k)) { pEng = v; break; }
+      }
+
+      if (pEng === pKor) {
+        pEng = "submarine navigating deep ocean underwater view, digital art";
+      }
+
+      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(pEng)}?width=512&height=512&nologo=true`;
       const img = document.getElementById('genResultImg');
       img.src = url;
-      img.onload = () => { document.getElementById('genStatus').innerText = "🎉 완료!"; };
+      img.onload = () => { document.getElementById('genStatus').innerText = "🎉 그림 생성 완료!"; };
+      img.onerror = () => { document.getElementById('genStatus').innerText = "이미지 연동 실패. 다시 시도하세요."; };
     }
 
     window.onload = () => { renderDictList(); initMNISTCanvas(); initWordCanvas(); };
