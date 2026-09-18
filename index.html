@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>고교생을 위한 AI 종합 실습실 (Vision · Speech · NLP · MNIST)</title>
+  <title>고교생을 위한 AI 종합 실습 플랫폼 (Vision · Speech · NLP · MNIST)</title>
   
   <!-- AI 외부 라이브러리 -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -34,19 +34,23 @@
     .card { background: white; border-radius: 8px; border: 1px solid #e0e0e0; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .card-title { font-size: 18px; font-weight: bold; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 15px; color: #0056b3; }
 
+    /* 미디어 영역 - 완벽한 중앙 정렬 적용 */
     .media-wrapper { 
       position: relative; 
       width: 100%; 
+      height: 420px; 
       background: #1e1e1e; 
       border-radius: 6px; 
       overflow: hidden; 
-      text-align: center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
     .media-wrapper canvas, .media-wrapper video, .media-wrapper img { 
       max-width: 100%; 
       max-height: 420px; 
       object-fit: contain; 
-      display: block; 
+      margin: auto;
     }
 
     .controls { margin-top: 15px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
@@ -82,7 +86,6 @@
     .dict-list { max-height: 120px; overflow-y: auto; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
     .dict-tag { background: #e0e0e0; padding: 2px 6px; border-radius: 3px; }
 
-    /* 손글씨 캔버스 전용 스타일 */
     #mnistCanvas { background: black; cursor: crosshair; border-radius: 6px; }
   </style>
 </head>
@@ -274,7 +277,7 @@
           <p style="font-size:13px; color:#666; margin-bottom:15px;">
             문장을 입력하면 AI가 단어를 토큰(Token)으로 분리하고 감정 사전 가중치를 계산하여 긍정/부정을 분석합니다.
           </p>
-          <textarea id="nlpInput" style="width:100%; height:100px; padding:10px; border:1px solid #ccc; border-radius:6px; resize:none;" placeholder="예: 오늘 인공지능 수업은 정말 기대되고 재미있을 것 같다!"></textarea>
+          <textarea id="nlpInput" style="width:100%; height:100px; padding:10px; border:1px solid #ccc; border-radius:6px; resize:none;" placeholder="예: 오늘 저녁 메뉴는 기대해도 좋을 것 같아!"></textarea>
           <div class="controls">
             <button class="btn" onclick="analyzeNLP()">분석하기</button>
           </div>
@@ -321,7 +324,6 @@
   </div>
 
   <script>
-    // 탭 전환 제어
     function showMainTab(tabId, btn) {
       document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
       document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -508,10 +510,10 @@
       });
     }
 
-    // ================= [TAB 2] 음성 인식 (STT & Audio Wave) =================
+    // ================= [TAB 2] 음성 인식 (STT) =================
     let recognition;
     let isRecognizing = false;
-    let audioCtx, analyser, dataArray, audioAnimId;
+    let audioCtx, analyser, audioAnimId;
 
     function toggleSTT() {
       if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -561,7 +563,7 @@
         source.connect(analyser);
         analyser.fftSize = 256;
         const bufferLength = analyser.frequencyBinCount;
-        dataArray = new Uint8Array(bufferLength);
+        const dataArray = new Uint8Array(bufferLength);
 
         const canvas = document.getElementById('audioCanvas');
         const ctx = canvas.getContext('2d');
@@ -587,9 +589,9 @@
       });
     }
 
-    // ================= [TAB 3] 자연어 처리 (NLP) =================
-    const posWords = ['기대', '재미', '좋다', '최고', '행복', '즐겁', '우수', '성공', '감사', '희망', '유익'];
-    const negWords = ['실망', '지루', '싫다', '최악', '슬픔', '어렵', '실패', '짜증', '걱정', '문제', '안좋'];
+    // ================= [TAB 3] 자연어 처리 (NLP 감지 단어 표기 포함) =================
+    const posWords = ['기대', '재미', '좋다', '좋', '최고', '행복', '즐겁', '우수', '성공', '감사', '희망', '유익', '맛있'];
+    const negWords = ['실망', '지루', '싫다', '최악', '슬픔', '어렵', '실패', '짜증', '걱정', '문제', '안좋', '별로'];
 
     function analyzeNLP() {
       const text = document.getElementById('nlpInput').value.trim();
@@ -597,11 +599,24 @@
 
       let posScore = 0;
       let negScore = 0;
+      let detectedPos = [];
+      let detectedNeg = [];
+
       const tokens = text.split(/\s+/);
 
       tokens.forEach(tok => {
-        posWords.forEach(pw => { if (tok.includes(pw)) posScore += 1; });
-        negWords.forEach(nw => { if (tok.includes(nw)) negScore += 1; });
+        posWords.forEach(pw => { 
+          if (tok.includes(pw) && !detectedPos.includes(pw)) {
+            posScore += 1;
+            detectedPos.push(pw);
+          } 
+        });
+        negWords.forEach(nw => { 
+          if (tok.includes(nw) && !detectedNeg.includes(nw)) {
+            negScore += 1;
+            detectedNeg.push(nw);
+          } 
+        });
       });
 
       const total = posScore + negScore;
@@ -612,11 +627,14 @@
       if (posRatio > 60) resultText = "😄 긍정적인 문장입니다!";
       else if (negRatio > 60) resultText = "😢 부정적인 문장입니다.";
 
+      const posListStr = detectedPos.length > 0 ? ` [<b>${detectedPos.join(', ')}</b>]` : '';
+      const negListStr = detectedNeg.length > 0 ? ` [<b>${detectedNeg.join(', ')}</b>]` : '';
+
       document.getElementById('nlpResult').innerHTML = `
-        <div style="font-size:18px; font-weight:bold; margin-bottom:10px;">${resultText}</div>
-        <p><b>토큰 분리 (Tokenization):</b> [${tokens.join(', ')}]</p><br>
-        <p><b>긍정 단어 감지:</b> ${posScore}개 (${posRatio}%)</p>
-        <p><b>부정 단어 감지:</b> ${negScore}개 (${negRatio}%)</p>
+        <div style="font-size:18px; font-weight:bold; margin-bottom:12px;">${resultText}</div>
+        <p style="margin-bottom:8px;"><b>토큰 분리 (Tokenization):</b> [${tokens.join(', ')}]</p>
+        <p style="margin-bottom:5px; color:#27ae60;"><b>긍정 단어 감지:</b> ${posScore}개 (${posRatio}%)${posListStr}</p>
+        <p style="color:#d63031;"><b>부정 단어 감지:</b> ${negScore}개 (${negRatio}%)${negListStr}</p>
       `;
     }
 
@@ -639,7 +657,6 @@
     mnistCanvas.addEventListener('touchend', () => { isDrawing = false; mnistCtx.beginPath(); });
     mnistCanvas.addEventListener('touchmove', (e) => {
       const touch = e.touches[0];
-      const rect = mnistCanvas.getBoundingClientRect();
       drawMNIST({ clientX: touch.clientX, clientY: touch.clientY });
       e.preventDefault();
     });
@@ -663,7 +680,6 @@
     }
 
     function predictMNIST() {
-      // 28x28 픽셀 행렬 시뮬레이션 인공신경망 확률 연산
       const imgData = mnistCtx.getImageData(0, 0, 280, 280);
       let whitePixels = 0;
       for (let i = 0; i < imgData.data.length; i += 4) {
@@ -675,7 +691,6 @@
         return;
       }
 
-      // 간단한 특성 추출 기반 딥러닝 예시 예측 (0~9)
       const predictedNum = Math.floor(Math.random() * 10);
       document.getElementById('mnistResultNum').innerText = predictedNum;
 
