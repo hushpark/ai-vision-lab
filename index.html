@@ -255,6 +255,7 @@
         <button class="tab-btn" onclick="switchSec4('sec4_3', this)">4-3. 한글 손글씨 OCR ➔ 감정 분석</button>
       </div>
 
+      <!-- 4-1. 숫자 인식 & CNN -->
       <div id="sec4_1" class="mode-panel active grid-2">
         <div class="card">
           <div class="card-title">✍️ 손글씨 숫자 마우스 드로잉 (MNIST CNN)</div>
@@ -280,6 +281,7 @@
         </div>
       </div>
 
+      <!-- 4-2. 영문 단어 쓰기 ➔ AI 그림 생성 -->
       <div id="sec4_2" class="mode-panel grid-2">
         <div class="card">
           <div class="card-title">🔤 영문 단어 손글씨 드로잉 (예: CAT, DOG, CAR, APPLE)</div>
@@ -308,6 +310,7 @@
         </div>
       </div>
 
+      <!-- 4-3. 한글 손글씨 OCR ➔ 감정 분석 -->
       <div id="sec4_3" class="mode-panel grid-2">
         <div class="card">
           <div class="card-title">📷 손글씨 사진 업로드 OCR ➔ 텍스트 추출</div>
@@ -334,18 +337,33 @@
       </div>
     </div>
 
-    <!-- TAB 5: 생성형 AI (한글 자동 번역 영문 프롬프트 매핑 보정) -->
+    <!-- TAB 5: 생성형 AI (무료 오픈 번역기 API 및 영문 프롬프트 동시 시각화) -->
     <div id="tab5" class="page-section">
       <div class="grid-2">
         <div class="card">
-          <div class="card-title">🎨 오픈 생성형 AI (Pollinations.ai API)</div>
-          <p style="font-size:13px; color:#666; margin-bottom:15px;">한글 프롬프트를 번역하여 Stable Diffusion 오픈 AI 인프라로 그림을 생성합니다.</p>
-          <textarea id="genPrompt" style="width:100%; height:110px; padding:10px; border:1px solid #ccc; border-radius:6px; resize:none;" placeholder="예: 바닷속을 누비는 잠수함"></textarea>
-          <div class="controls"><button class="btn btn-purple" onclick="generateAIImage()">🎨 AI 그림 생성하기</button><span id="genStatus" class="status-text" style="color:#8e44ad;">무료 연동 대기 중</span></div>
+          <div class="card-title">🎨 오픈 생성형 AI (실시간 번역 & Text-to-Image)</div>
+          <p style="font-size:13px; color:#666; margin-bottom:15px;">상상하는 장면을 한글로 자유롭게 적어보세요. 오픈 번역 엔진이 영문 프롬프트로 변환한 뒤 고화질 그림을 생성합니다.</p>
+          
+          <textarea id="genPrompt" style="width:100%; height:90px; padding:10px; border:1px solid #ccc; border-radius:6px; resize:none;" placeholder="예: 해안가 모래사장을 거닐고 있는 사람과 개"></textarea>
+          
+          <div class="controls">
+            <button class="btn btn-purple" onclick="generateAIImage()">🎨 AI 그림 생성하기</button>
+            <span id="genStatus" class="status-text" style="color:#8e44ad;">원하는 장면을 작성해 보세요.</span>
+          </div>
+
+          <div style="margin-top:15px; background:#f8f9fa; border:1px solid #e0e0e0; padding:12px; border-radius:6px;">
+            <b style="font-size:12px; color:#0056b3;">🌐 AI 자동 번역 프롬프트 (Prompt):</b>
+            <div id="translatedPromptDisplay" style="font-family:monospace; font-size:13px; color:#2c3e50; margin-top:5px; word-break:break-all;">
+              - (한글 문장을 입력 후 생성 버튼을 누르세요)
+            </div>
+          </div>
         </div>
+
         <div class="card">
           <div class="card-title">🖼️ 생성된 AI 아트워크</div>
-          <div class="media-wrapper" style="height:320px; background:#f0f3f6;"><img id="genResultImg" src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800" style="max-width:100%; max-height:320px;"></div>
+          <div class="media-wrapper" style="height:320px; background:#f0f3f6;">
+            <img id="genResultImg" src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800" style="max-width:100%; max-height:320px; border-radius:6px;">
+          </div>
         </div>
       </div>
     </div>
@@ -569,7 +587,7 @@
       document.getElementById('mnistProbList').innerHTML = html;
     }
 
-    // TAB 4-2: 영문 단어
+    // TAB 4-2: 영문 단어 쓰기
     const wordCanvas = document.getElementById('wordCanvas');
     const wordCtx = wordCanvas.getContext('2d');
     let isDrawingWord = false;
@@ -636,10 +654,9 @@
           status.innerText = `✅ [${recognizedText}] AI 그림 완성!`; 
         };
         img.onerror = () => {
-          img.src = "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800";
-          placeholder.style.display = 'none';
-          img.style.display = 'block';
-          status.innerText = `✅ [${recognizedText}] AI 그림 완성!`;
+          placeholder.style.display = 'flex';
+          img.style.display = 'none';
+          status.innerText = `⚠️ AI 그림 생성 실패. 다시 시도해 주세요.`;
         };
       } catch (err) {
         status.innerText = "인식 오차 발생. 다시 시도해 주세요.";
@@ -690,36 +707,50 @@
       }
     }
 
-    // TAB 5: 생성형 AI (한글 키워드 ➔ 영문 자동 프롬프트 맵)
-    const promptMap = {
-      '잠수함': 'submarine underwater ocean detailed 8k',
-      '바다': 'sea ocean underwater view clear blue',
-      '고양이': 'cute cat playing cozy illustration',
-      '강아지': 'cute dog golden retriever in garden',
-      '우주': 'outer space galaxy stars nebula spaceship',
-      '로봇': 'futuristic robot sci-fi high tech 8k'
-    };
-
-    function generateAIImage() {
+    // ================= TAB 5: 오픈 번역 API 연동 & 실시간 프롬프트 생성 =================
+    async function generateAIImage() {
       const pKor = document.getElementById('genPrompt').value.trim(); 
-      if(!pKor) { alert("그림 상황을 입력하세요!"); return; }
+      if(!pKor) { alert("장면을 한글로 작성해 주세요!"); return; }
 
-      document.getElementById('genStatus').innerText = "⏳ 영문 번역 중 & AI 그림 생성 중...";
+      const statusText = document.getElementById('genStatus');
+      const promptDisplay = document.getElementById('translatedPromptDisplay');
 
-      let pEng = pKor;
-      for (const [k, v] of Object.entries(promptMap)) {
-        if (pKor.includes(k)) { pEng = v; break; }
+      statusText.innerText = "🌐 1단계: 한글 프롬프트를 영문으로 실시간 번역 중...";
+      statusText.style.color = "#e67e22";
+
+      try {
+        // 오픈 무료 번역 API (MyMemory Translation API) 호출
+        const transRes = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(pKor)}&langpair=ko|en`);
+        const transData = await transRes.json();
+        
+        let pEng = transData.responseData ? transData.responseData.translatedText : pKor;
+        
+        // 프롬프트 품질 향상을 위한 화풍 키워드 결합
+        const finalPrompt = `${pEng}, high quality, detailed, 8k resolution`;
+
+        promptDisplay.innerHTML = `<code>${finalPrompt}</code>`;
+        statusText.innerText = "🎨 2단계: 영문 프롬프트 기반 AI 그림 생성 중... (약 2~3초)";
+        statusText.style.color = "#8e44ad";
+
+        // Pollinations AI로 정밀 번역된 영문 전달
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?width=512&height=512&nologo=true`;
+        
+        const img = document.getElementById('genResultImg');
+        img.src = imageUrl;
+
+        img.onload = () => {
+          statusText.innerText = "🎉 그림 생성 완료!";
+          statusText.style.color = "green";
+        };
+
+        img.onerror = () => {
+          statusText.innerText = "그림 연동 실패. 다시 시도해 주세요.";
+          statusText.style.color = "red";
+        };
+
+      } catch (err) {
+        statusText.innerText = "번역 엔진 오류. 다시 시도하세요.";
       }
-
-      if (pEng === pKor) {
-        pEng = "submarine navigating deep ocean underwater view, digital art";
-      }
-
-      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(pEng)}?width=512&height=512&nologo=true`;
-      const img = document.getElementById('genResultImg');
-      img.src = url;
-      img.onload = () => { document.getElementById('genStatus').innerText = "🎉 그림 생성 완료!"; };
-      img.onerror = () => { document.getElementById('genStatus').innerText = "이미지 연동 실패. 다시 시도하세요."; };
     }
 
     window.onload = () => { renderDictList(); initMNISTCanvas(); initWordCanvas(); };
